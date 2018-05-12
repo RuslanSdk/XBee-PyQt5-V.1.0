@@ -83,3 +83,4 @@ class XBeeConnect(QObject):
 
     def info_type_s2c_dev(self):
         self.coordinator_enabled = self.local_device.get_parameter('CE')
+        self.sleep_mode = self.local_device.get_parameter('SM')

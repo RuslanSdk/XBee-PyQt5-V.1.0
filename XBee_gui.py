@@ -121,10 +121,15 @@ class MainWindow(QMainWindow):
             print(module_type_dict.get('29'))
         elif self.xbee_connect.type_device[0:2] == '40':
             self.signal_info_type_s2c_dev.emit()
-            if str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01':
+            if (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01' and
+                    str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
                 self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Coordinator')
-            else:
+            elif (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '00' and
+                    str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
                 self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Router')
+            elif (str(hex_to_string(self.xbee_connect.sleep_mode)) == '04' or
+                        str(hex_to_string(self.xbee_connect.sleep_mode)) == '05'):
+                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'End Device')
 
     def error_connect(self):
 
