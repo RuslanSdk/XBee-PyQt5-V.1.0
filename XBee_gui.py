@@ -5,10 +5,11 @@ import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QDialog, QGridLayout,
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
                              QMessageBox)
-from PyQt5.QtGui import (QIcon)
+from PyQt5.QtGui import (QIcon, QPixmap)
 from PyQt5.QtCore import (pyqtSignal, QThread)
 from XBee_connect import XBeeConnect
 from digi.xbee.util.utils import hex_to_string
+import time
 
 
 module_type_dict = {'21': 'S2B ZigBee Coordinator API',
@@ -32,17 +33,16 @@ class MainWindow(QMainWindow):
 
         self.init_ui()
 
-        # создаем экзмепляр класса XBeeConnect и поток; подключаем поток
+        # создаем экзмепляр класса XBeeConnect
         self.xbee_connect = XBeeConnect(self)
 
     def start_connect_to_module_clicked(self):
-
+        # создаем и подключаем поток
         self.connection_thread = QThread()
         self.xbee_connect.moveToThread(self.connection_thread)
 
         self.read_values()
         self.connection_thread.start()
-
 
         self.xbee_connect.successful_connection_signal.connect(self.success_connect)
         self.xbee_connect.error_connection_signal.connect(self.error_connect)
@@ -75,6 +75,11 @@ class MainWindow(QMainWindow):
 
         self.signal_disconnect_module.emit()
         self.connection_thread.quit()
+        self.read_btn.setDisabled(True)
+        self.write_btn.setDisabled(True)
+        time.sleep(2)
+        self.disconnect_module_btn.setDisabled(True)
+        self.icon_connect_disconnect.setPixmap(self.icon_disconnect)
         print('ПОТОК ОСТАНОВЛЕН')
 
     def read_values(self):
@@ -103,6 +108,7 @@ class MainWindow(QMainWindow):
         self.read_btn.setDisabled(False)
         self.write_btn.setDisabled(False)
         self.disconnect_module_btn.setDisabled(False)
+        self.icon_connect_disconnect.setPixmap(self.icon_connect)
 
         if self.xbee_connect.type_device[0:2] == '21':
             self.info_type_device.setText(module_type_dict.get('21'))
@@ -118,7 +124,7 @@ class MainWindow(QMainWindow):
             if str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01':
                 self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Coordinator')
             else:
-                print('либо роутер либо оконечное')
+                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Router')
 
     def error_connect(self):
 
@@ -133,8 +139,6 @@ class MainWindow(QMainWindow):
         self.main_layout = QVBoxLayout(self.main_widget)
         self.setCentralWidget(self.main_widget)
         self.tabs = QTabWidget()
-        self.info_type_device = QLabel()
-        self.main_layout.addWidget(self.info_type_device)
         self.main_layout.addWidget(self.tabs)
 
         self.init_toolbar()
@@ -197,6 +201,8 @@ class MainWindow(QMainWindow):
         self.panel_control_layout = QHBoxLayout(self.panel_control_box)
         self.panel_parameters_box = QGroupBox()
         self.panel_parameters_layout = QGridLayout(self.panel_parameters_box)
+        self.panel_info_box = QGroupBox()
+        self.panel_info_layout = QHBoxLayout(self.panel_info_box)
 
         self.pan_id_lbl = QLabel('PAN ID сети:')
         self.pan_id_edit = QLineEdit()
@@ -207,10 +213,18 @@ class MainWindow(QMainWindow):
         self.read_btn = QPushButton('Обновить')
         self.write_btn = QPushButton('Записать')
         self.disconnect_module_btn = QPushButton('Отключить')
+        self.info_type_device = QLabel()
+        self.icon_connect = QPixmap('images/connect_icon.png')
+        self.icon_disconnect = QPixmap('images/disconnect_icon.png')
+        self.icon_connect_disconnect = QLabel()
+        self.icon_connect_disconnect.setPixmap(self.icon_disconnect)
 
         self.read_btn.setDisabled(True)
         self.write_btn.setDisabled(True)
         self.disconnect_module_btn.setDisabled(True)
+
+        self.panel_info_layout.addWidget(self.info_type_device)
+        self.panel_info_layout.addWidget(self.icon_connect_disconnect)
 
         self.panel_control_layout.addWidget(self.read_btn)
         self.panel_control_layout.addWidget(self.write_btn)
@@ -223,6 +237,7 @@ class MainWindow(QMainWindow):
         self.panel_parameters_layout.addWidget(self.node_id_lbl, 3, 0)
         self.panel_parameters_layout.addWidget(self.node_id_edit, 3, 1)
 
+        self.tab_settings_layout.addWidget(self.panel_info_box)
         self.tab_settings_layout.addWidget(self.panel_control_box)
         self.tab_settings_layout.addWidget(self.panel_parameters_box)
 
