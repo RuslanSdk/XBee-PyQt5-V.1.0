@@ -31,6 +31,12 @@ class MainWindow(QMainWindow):
     signal_apply_change_id = pyqtSignal(str)
     signal_update_info_ni = pyqtSignal()
     signal_apply_change_ni = pyqtSignal(str)
+    signal_update_info_ce = pyqtSignal()
+    signal_apply_change_ce = pyqtSignal(str)
+    signal_update_info_jv = pyqtSignal()
+    signal_apply_change_jv = pyqtSignal(str)
+    signal_update_info_sm = pyqtSignal()
+    signal_apply_change_sm = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -130,6 +136,39 @@ class MainWindow(QMainWindow):
         param_node_id = self.node_id_edit.text()
         self.signal_apply_change_ni.emit(param_node_id)
         self.node_id_edit.setText(str(self.xbee_connect.new_ni))
+
+    def update_info_ce_clicked(self):
+
+        self.signal_update_info_ce.emit()
+        self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.info_ce)))
+
+    def apply_change_ce_clicked(self):
+
+        param_ce = self.coord_en_edit.text()
+        self.signal_apply_change_ce.emit(param_ce)
+        self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.new_ce)))
+
+    def update_info_jv_clicked(self):
+
+        self.signal_update_info_jv.emit()
+        self.channel_ver_edit.setText(str(hex_to_string(self.xbee_connect.info_jv)))
+
+    def apply_change_jv_clicked(self):
+
+        param_jv = self.channel_ver_edit.text()
+        self.signal_apply_change_jv.emit(param_jv)
+        self.channel_ver_edit.setText(str(hex_to_string(self.xbee_connect.new_jv)))
+
+    def update_info_sm_clicked(self):
+
+        self.signal_update_info_sm.emit()
+        self.sleep_mode_edit.setText(str(hex_to_string(self.xbee_connect.info_sm)))
+
+    def apply_change_sm_clicked(self):
+
+        param_sm = self.sleep_mode_edit.text()
+        self.signal_apply_change_sm.emit(param_sm)
+        self.sleep_mode_edit.setText(str(hex_to_string(self.xbee_connect.new_sm)))
 
     def success_connect(self):
 
@@ -395,6 +434,8 @@ class MainWindow(QMainWindow):
         self.apply_change_id_btn.clicked.connect(self.apply_change_id_clicked)
         self.update_info_ni_btn.clicked.connect(self.update_info_ni_clicked)
         self.apply_change_ni_btn.clicked.connect(self.apply_change_ni_clicked)
+        self.update_info_ce_btn.clicked.connect(self.update_info_ce_clicked)
+        self.apply_change_ce_btn.clicked.connect(self.apply_change_ce_clicked)
 
 
 if __name__ == '__main__':

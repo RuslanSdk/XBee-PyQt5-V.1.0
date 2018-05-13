@@ -32,6 +32,12 @@ class XBeeConnect(QObject):
         self.parent.signal_apply_change_id.connect(self.apply_change_id)
         self.parent.signal_update_info_ni.connect(self.update_info_ni)
         self.parent.signal_apply_change_ni.connect(self.apply_change_ni)
+        self.parent.signal_update_info_ce.connect(self.update_info_ce)
+        self.parent.signal_apply_change_ce.connect(self.apply_change_ce)
+        self.parent.signal_update_info_jv.connect()
+        self.parent.signal_apply_change_jv.connect()
+        self.parent.signal_update_info_sm.connect()
+        self.parent.signal_apply_change_sm.connect()
 
     @pyqtSlot()
     def start_connection(self):
@@ -112,3 +118,38 @@ class XBeeConnect(QObject):
         self.local_device.apply_changes()
         self.local_device.write_changes()
         self.new_ni = self.local_device.get_node_id()
+
+    def update_info_ce(self):
+
+        self.info_ce = self.local_device.get_parameter('CE')
+
+    def apply_change_ce(self, ce):
+
+        self.local_device.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        self.local_device.apply_changes()
+        self.local_device.write_changes()
+        self.new_ce = self.local_device.get_parameter('CE')
+
+    def update_info_jv(self):
+
+        self.info_ce = self.local_device.get_parameter('CE')
+
+    def apply_change_jv(self, jv):
+
+        self.local_device.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        self.local_device.apply_changes()
+        self.local_device.write_changes()
+        self.new_ce = self.local_device.get_parameter('CE')
+
+    def update_info_sm(self):
+
+        self.info_ce = self.local_device.get_parameter('CE')
+
+    def apply_change_sm(self, sm):
+
+        self.local_device.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        self.local_device.apply_changes()
+        self.local_device.write_changes()
+        self.new_ce = self.local_device.get_parameter('CE')
+
+#TODO Привязать функции update_info_jv, apply_change_jv, update_info_sm, apply_change_sm к кнопкам соотвественно
