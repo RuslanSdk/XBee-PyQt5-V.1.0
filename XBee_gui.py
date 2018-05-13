@@ -172,17 +172,29 @@ class MainWindow(QMainWindow):
         self.disconnect_module_btn.setDisabled(False)
         self.icon_connect_disconnect.setPixmap(self.icon_connect)
 
+        self.type_firmware_devices()
+
+    def type_firmware_devices(self):
+        # Определение типа устройства и прошивки
+
         if self.xbee_connect.type_device[0:2] == '21':
             self.info_type_device.setText(module_type_dict.get('21'))
+            self.hide_fields()
             print(module_type_dict.get('21'))
         if self.xbee_connect.type_device[0:2] == '23':
             self.info_type_device.setText(module_type_dict.get('23'))
             self.coord_en_lbl.hide()
             self.coord_en_edit.hide()
+            self.update_info_ce_btn.hide()
+            self.apply_change_ce_btn.hide()
             self.channel_ver_lbl.show()
             self.channel_ver_edit.show()
+            self.update_info_jv_btn.show()
+            self.apply_change_jv_btn.show()
             self.sleep_mode_lbl.hide()
             self.sleep_mode_edit.hide()
+            self.update_info_sm_btn.hide()
+            self.apply_change_sm_btn.hide()
             print(module_type_dict.get('23'))
         if self.xbee_connect.type_device[0:2] == '29':
             self.info_type_device.setText(module_type_dict.get('29'))
@@ -213,6 +225,7 @@ class MainWindow(QMainWindow):
 
     def error_connect(self):
 
+        self.connection_thread.quit()
         QMessageBox.warning(self, 'Ошибка', 'COM-порт не найден или уже используется')
 
     def init_ui(self):
@@ -402,19 +415,8 @@ class MainWindow(QMainWindow):
         self.panel_parameters_layout.addWidget(self.sleep_mode_edit, 5, 1)
         self.panel_parameters_layout.addWidget(self.update_info_sm_btn, 5, 2)
         self.panel_parameters_layout.addWidget(self.apply_change_sm_btn, 5, 3)
-        # скрытие полей и кнопок
-        self.coord_en_lbl.hide()
-        self.coord_en_edit.hide()
-        self.update_info_ce_btn.hide()
-        self.apply_change_ce_btn.hide()
-        self.channel_ver_lbl.hide()
-        self.channel_ver_edit.hide()
-        self.update_info_jv_btn.hide()
-        self.apply_change_jv_btn.hide()
-        self.sleep_mode_lbl.hide()
-        self.sleep_mode_edit.hide()
-        self.update_info_sm_btn.hide()
-        self.apply_change_sm_btn.hide()
+
+        self.hide_fields()
 
         self.tab_settings_layout.addWidget(self.panel_info_box)
         self.tab_settings_layout.addWidget(self.panel_control_box)
@@ -433,6 +435,22 @@ class MainWindow(QMainWindow):
         self.apply_change_jv_btn.clicked.connect(self.apply_change_jv_clicked)
         self.update_info_sm_btn.clicked.connect(self.update_info_sm_clicked)
         self.apply_change_sm_btn.clicked.connect(self.apply_change_sm_clicked)
+
+    def hide_fields(self):
+        # скрытие полей и кнопок
+
+        self.coord_en_lbl.hide()
+        self.coord_en_edit.hide()
+        self.update_info_ce_btn.hide()
+        self.apply_change_ce_btn.hide()
+        self.channel_ver_lbl.hide()
+        self.channel_ver_edit.hide()
+        self.update_info_jv_btn.hide()
+        self.apply_change_jv_btn.hide()
+        self.sleep_mode_lbl.hide()
+        self.sleep_mode_edit.hide()
+        self.update_info_sm_btn.hide()
+        self.apply_change_sm_btn.hide()
 
 
 if __name__ == '__main__':
