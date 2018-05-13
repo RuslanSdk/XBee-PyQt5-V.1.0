@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QD
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
                              QMessageBox)
 from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import (pyqtSignal, QThread)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize)
 from XBee_connect import XBeeConnect
 from digi.xbee.util.utils import hex_to_string
 import time
@@ -54,6 +54,7 @@ class MainWindow(QMainWindow):
         self.signal_read_info.emit()
 
         self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.pan_id)))
+
         #self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.coord_en)))
         self.node_id_edit.setText(str(self.xbee_connect.node_id))
 
@@ -115,11 +116,29 @@ class MainWindow(QMainWindow):
             print(module_type_dict.get('21'))
         if self.xbee_connect.type_device[0:2] == '23':
             self.info_type_device.setText(module_type_dict.get('23'))
+            self.coord_en_lbl.hide()
+            self.coord_en_edit.hide()
+            self.channel_ver_lbl.show()
+            self.channel_ver_edit.show()
+            self.sleep_mode_lbl.hide()
+            self.sleep_mode_edit.hide()
             print(module_type_dict.get('23'))
         if self.xbee_connect.type_device[0:2] == '29':
             self.info_type_device.setText(module_type_dict.get('29'))
             print(module_type_dict.get('29'))
         elif self.xbee_connect.type_device[0:2] == '40':
+            self.coord_en_lbl.show()
+            self.coord_en_edit.show()
+            self.update_info_ce_btn.show()
+            self.apply_change_ce_btn.show()
+            self.channel_ver_lbl.show()
+            self.channel_ver_edit.show()
+            self.update_info_jv_btn.show()
+            self.apply_change_jv_btn.show()
+            self.sleep_mode_lbl.show()
+            self.sleep_mode_edit.show()
+            self.update_info_sm_btn.show()
+            self.apply_change_sm_btn.show()
             self.signal_info_type_s2c_dev.emit()
             if (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01' and
                     str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
@@ -209,12 +228,76 @@ class MainWindow(QMainWindow):
         self.panel_info_box = QGroupBox()
         self.panel_info_layout = QHBoxLayout(self.panel_info_box)
 
+        # Поле: PAN ID
         self.pan_id_lbl = QLabel('PAN ID сети:')
         self.pan_id_edit = QLineEdit()
-        self.coord_en_lbl = QLabel('Функции координатора:')
-        self.coord_en_edit = QLineEdit()
+
+        self.update_info_id_btn = QPushButton()
+        self.update_info_id_btn.setToolTip('Обновить значение')
+        self.update_info_id_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
+        self.update_info_id_btn.setIconSize(QSize(20, 20))
+
+        self.apply_change_id_btn = QPushButton()
+        self.apply_change_id_btn.setToolTip('Записать значение')
+        self.apply_change_id_btn.setIcon(QIcon('images/write_update_icon.png'))
+        self.apply_change_id_btn.setIconSize(QSize(20, 20))
+
+        # Поле: Идентификатор узла
         self.node_id_lbl = QLabel('Идентификатор узла:')
         self.node_id_edit = QLineEdit()
+
+        self.update_info_ni_btn = QPushButton()
+        self.update_info_ni_btn.setToolTip('Обновить значение')
+        self.update_info_ni_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
+        self.update_info_ni_btn.setIconSize(QSize(20, 20))
+
+        self.apply_change_ni_btn = QPushButton()
+        self.apply_change_ni_btn.setToolTip('Записать значение')
+        self.apply_change_ni_btn.setIcon(QIcon('images/write_update_icon.png'))
+        self.apply_change_ni_btn.setIconSize(QSize(20, 20))
+
+        # Поле: Режим координатор
+        self.coord_en_lbl = QLabel('Режим координатор:')
+        self.coord_en_edit = QLineEdit()
+
+        self.update_info_ce_btn = QPushButton()
+        self.update_info_ce_btn.setToolTip('Обновить значение')
+        self.update_info_ce_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
+        self.update_info_ce_btn.setIconSize(QSize(20, 20))
+
+        self.apply_change_ce_btn = QPushButton()
+        self.apply_change_ce_btn.setToolTip('Записать значение')
+        self.apply_change_ce_btn.setIcon(QIcon('images/write_update_icon.png'))
+        self.apply_change_ce_btn.setIconSize(QSize(20, 20))
+
+        # Поле: Проверка канала
+        self.channel_ver_lbl = QLabel('Проверка канала:')
+        self.channel_ver_edit = QLineEdit()
+
+        self.update_info_jv_btn = QPushButton()
+        self.update_info_jv_btn.setToolTip('Обновить значение')
+        self.update_info_jv_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
+        self.update_info_jv_btn.setIconSize(QSize(20, 20))
+
+        self.apply_change_jv_btn = QPushButton()
+        self.apply_change_jv_btn.setToolTip('Записать значение')
+        self.apply_change_jv_btn.setIcon(QIcon('images/write_update_icon.png'))
+        self.apply_change_jv_btn.setIconSize(QSize(20, 20))
+
+        # Поле: Режим сна
+        self.sleep_mode_lbl = QLabel('Режим сна:')
+        self.sleep_mode_edit = QLineEdit()
+
+        self.update_info_sm_btn = QPushButton()
+        self.update_info_sm_btn.setToolTip('Обновить значение')
+        self.update_info_sm_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
+        self.update_info_sm_btn.setIconSize(QSize(20, 20))
+
+        self.apply_change_sm_btn = QPushButton()
+        self.apply_change_sm_btn.setToolTip('Записать значение')
+        self.apply_change_sm_btn.setIcon(QIcon('images/write_update_icon.png'))
+        self.apply_change_sm_btn.setIconSize(QSize(20, 20))
+
         self.read_btn = QPushButton('Обновить')
         self.write_btn = QPushButton('Записать')
         self.disconnect_module_btn = QPushButton('Отключить')
@@ -234,13 +317,44 @@ class MainWindow(QMainWindow):
         self.panel_control_layout.addWidget(self.read_btn)
         self.panel_control_layout.addWidget(self.write_btn)
         self.panel_control_layout.addWidget(self.disconnect_module_btn)
-
+        # pan id
         self.panel_parameters_layout.addWidget(self.pan_id_lbl, 1, 0)
         self.panel_parameters_layout.addWidget(self.pan_id_edit, 1, 1)
-        self.panel_parameters_layout.addWidget(self.coord_en_lbl, 2, 0)
-        self.panel_parameters_layout.addWidget(self.coord_en_edit, 2, 1)
-        self.panel_parameters_layout.addWidget(self.node_id_lbl, 3, 0)
-        self.panel_parameters_layout.addWidget(self.node_id_edit, 3, 1)
+        self.panel_parameters_layout.addWidget(self.update_info_id_btn, 1, 2)
+        self.panel_parameters_layout.addWidget(self.apply_change_id_btn, 1, 3)
+        # node id
+        self.panel_parameters_layout.addWidget(self.node_id_lbl, 2, 0)
+        self.panel_parameters_layout.addWidget(self.node_id_edit, 2, 1)
+        self.panel_parameters_layout.addWidget(self.update_info_ni_btn, 2, 2)
+        self.panel_parameters_layout.addWidget(self.apply_change_ni_btn, 2, 3)
+        # coordinator enabled
+        self.panel_parameters_layout.addWidget(self.coord_en_lbl, 3, 0)
+        self.panel_parameters_layout.addWidget(self.coord_en_edit, 3, 1)
+        self.panel_parameters_layout.addWidget(self.update_info_ce_btn, 3, 2)
+        self.panel_parameters_layout.addWidget(self.apply_change_ce_btn, 3, 3)
+        # channel verification
+        self.panel_parameters_layout.addWidget(self.channel_ver_lbl, 4, 0)
+        self.panel_parameters_layout.addWidget(self.channel_ver_edit, 4, 1)
+        self.panel_parameters_layout.addWidget(self.update_info_jv_btn, 4, 2)
+        self.panel_parameters_layout.addWidget(self.apply_change_jv_btn, 4, 3)
+        # sleep mode
+        self.panel_parameters_layout.addWidget(self.sleep_mode_lbl, 5, 0)
+        self.panel_parameters_layout.addWidget(self.sleep_mode_edit, 5, 1)
+        self.panel_parameters_layout.addWidget(self.update_info_sm_btn, 5, 2)
+        self.panel_parameters_layout.addWidget(self.apply_change_sm_btn, 5, 3)
+        # скрытие полей и кнопок
+        self.coord_en_lbl.hide()
+        self.coord_en_edit.hide()
+        self.update_info_ce_btn.hide()
+        self.apply_change_ce_btn.hide()
+        self.channel_ver_lbl.hide()
+        self.channel_ver_edit.hide()
+        self.update_info_jv_btn.hide()
+        self.apply_change_jv_btn.hide()
+        self.sleep_mode_lbl.hide()
+        self.sleep_mode_edit.hide()
+        self.update_info_sm_btn.hide()
+        self.apply_change_sm_btn.hide()
 
         self.tab_settings_layout.addWidget(self.panel_info_box)
         self.tab_settings_layout.addWidget(self.panel_control_box)
