@@ -27,6 +27,10 @@ class MainWindow(QMainWindow):
     signal_write_info = pyqtSignal(tuple)
     signal_disconnect_module = pyqtSignal()
     signal_info_type_s2c_dev = pyqtSignal()
+    signal_update_info_id = pyqtSignal()
+    signal_apply_change_id = pyqtSignal(str)
+    signal_update_info_ni = pyqtSignal()
+    signal_apply_change_ni = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
@@ -102,6 +106,30 @@ class MainWindow(QMainWindow):
         else:
             print("Ошибка проверьте Скорость")
             return
+
+    def update_info_id_clicked(self):
+
+        self.signal_update_info_id.emit()
+        self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.info_id)))
+
+    def apply_change_id_clicked(self):
+
+        param_pan_id = self.pan_id_edit.text()
+        self.signal_apply_change_id.emit(param_pan_id)
+        self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.new_id)))
+
+    def update_info_ni_clicked(self):
+
+        self.signal_update_info_ni.emit()
+        if len(str(self.xbee_connect.info_ni)) == 1:
+            QMessageBox.warning(self, 'Oooops!', 'Индентификатор узла не указан')
+        self.node_id_edit.setText(str(self.xbee_connect.info_ni))
+
+    def apply_change_ni_clicked(self):
+
+        param_node_id = self.node_id_edit.text()
+        self.signal_apply_change_ni.emit(param_node_id)
+        self.node_id_edit.setText(str(self.xbee_connect.new_ni))
 
     def success_connect(self):
 
@@ -363,6 +391,10 @@ class MainWindow(QMainWindow):
         self.read_btn.clicked.connect(self.read_info_clicked)
         self.write_btn.clicked.connect(self.write_info_clicked)
         self.disconnect_module_btn.clicked.connect(self.disconnect_module_clicked)
+        self.update_info_id_btn.clicked.connect(self.update_info_id_clicked)
+        self.apply_change_id_btn.clicked.connect(self.apply_change_id_clicked)
+        self.update_info_ni_btn.clicked.connect(self.update_info_ni_clicked)
+        self.apply_change_ni_btn.clicked.connect(self.apply_change_ni_clicked)
 
 
 if __name__ == '__main__':

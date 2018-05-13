@@ -28,6 +28,10 @@ class XBeeConnect(QObject):
         self.parent.signal_write_info.connect(self.write_info)
         self.parent.signal_disconnect_module.connect(self.close_port)
         self.parent.signal_info_type_s2c_dev.connect(self.info_type_s2c_dev)
+        self.parent.signal_update_info_id.connect(self.update_info_id)
+        self.parent.signal_apply_change_id.connect(self.apply_change_id)
+        self.parent.signal_update_info_ni.connect(self.update_info_ni)
+        self.parent.signal_apply_change_ni.connect(self.apply_change_ni)
 
     @pyqtSlot()
     def start_connection(self):
@@ -83,5 +87,28 @@ class XBeeConnect(QObject):
         print('ПОРТ ЗАКРЫТ')
 
     def info_type_s2c_dev(self):
+
         self.coordinator_enabled = self.local_device.get_parameter('CE')
         self.sleep_mode = self.local_device.get_parameter('SM')
+
+    def update_info_id(self):
+
+        self.info_id = self.local_device.get_parameter('ID')
+
+    def apply_change_id(self, id):
+
+        self.local_device.set_pan_id(hex_string_to_bytes(str(id)))
+        self.local_device.apply_changes()
+        self.local_device.write_changes()
+        self.new_id = self.local_device.get_parameter('ID')
+
+    def update_info_ni(self):
+
+        self.info_ni = self.local_device.get_node_id()
+
+    def apply_change_ni(self, ni):
+
+        self.local_device.set_parameter('NI', bytearray(str(ni), 'utf8'))
+        self.local_device.apply_changes()
+        self.local_device.write_changes()
+        self.new_ni = self.local_device.get_node_id()
