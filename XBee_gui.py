@@ -436,6 +436,10 @@ class MainWindow(QMainWindow):
         self.apply_change_ni_btn.clicked.connect(self.apply_change_ni_clicked)
         self.update_info_ce_btn.clicked.connect(self.update_info_ce_clicked)
         self.apply_change_ce_btn.clicked.connect(self.apply_change_ce_clicked)
+        self.update_info_jv_btn.clicked.connect(self.update_info_jv_clicked)
+        self.apply_change_jv_btn.clicked.connect(self.apply_change_jv_clicked)
+        self.update_info_sm_btn.clicked.connect(self.update_info_sm_clicked)
+        self.apply_change_sm_btn.clicked.connect(self.apply_change_sm_clicked)
 
 
 if __name__ == '__main__':

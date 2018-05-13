@@ -34,10 +34,10 @@ class XBeeConnect(QObject):
         self.parent.signal_apply_change_ni.connect(self.apply_change_ni)
         self.parent.signal_update_info_ce.connect(self.update_info_ce)
         self.parent.signal_apply_change_ce.connect(self.apply_change_ce)
-        self.parent.signal_update_info_jv.connect()
-        self.parent.signal_apply_change_jv.connect()
-        self.parent.signal_update_info_sm.connect()
-        self.parent.signal_apply_change_sm.connect()
+        self.parent.signal_update_info_jv.connect(self.update_info_jv)
+        self.parent.signal_apply_change_jv.connect(self.apply_change_jv)
+        self.parent.signal_update_info_sm.connect(self.update_info_sm)
+        self.parent.signal_apply_change_sm.connect(self.apply_change_sm)
 
     @pyqtSlot()
     def start_connection(self):
@@ -132,24 +132,24 @@ class XBeeConnect(QObject):
 
     def update_info_jv(self):
 
-        self.info_ce = self.local_device.get_parameter('CE')
+        self.info_jv = self.local_device.get_parameter('JV')
 
     def apply_change_jv(self, jv):
 
-        self.local_device.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        self.local_device.set_parameter('JV', hex_string_to_bytes(str(jv)))
         self.local_device.apply_changes()
         self.local_device.write_changes()
-        self.new_ce = self.local_device.get_parameter('CE')
+        self.new_jv = self.local_device.get_parameter('JV')
 
     def update_info_sm(self):
 
-        self.info_ce = self.local_device.get_parameter('CE')
+        self.info_sm = self.local_device.get_parameter('SM')
 
     def apply_change_sm(self, sm):
 
-        self.local_device.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        self.local_device.set_parameter('SM', hex_string_to_bytes(str(sm)))
         self.local_device.apply_changes()
         self.local_device.write_changes()
-        self.new_ce = self.local_device.get_parameter('CE')
+        self.new_sm = self.local_device.get_parameter('SM')
 
 #TODO Привязать функции update_info_jv, apply_change_jv, update_info_sm, apply_change_sm к кнопкам соотвественно
