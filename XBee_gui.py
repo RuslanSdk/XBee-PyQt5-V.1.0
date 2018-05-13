@@ -62,24 +62,18 @@ class MainWindow(QMainWindow):
     def read_info_clicked(self):
 
         self.signal_read_info.emit()
-
         self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.pan_id)))
-
-        #self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.coord_en)))
         self.node_id_edit.setText(str(self.xbee_connect.node_id))
 
     def write_info_clicked(self):
 
         param_pan_id = self.pan_id_edit.text()
-        #param_coord_en = self.coord_en_edit.text()
         param_node_id = self.node_id_edit.text()
-
         parameters_tuple = (param_pan_id, param_node_id)
 
         self.signal_write_info.emit(parameters_tuple)
 
         self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.new_pan_id)))
-        #self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.new_coord_en)))
         self.node_id_edit.setText(str(self.xbee_connect.new_node_id))
 
     def disconnect_module_clicked(self):
@@ -231,7 +225,6 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.main_widget)
         self.tabs = QTabWidget()
         self.main_layout.addWidget(self.tabs)
-
         self.init_toolbar()
         self.one_tab_settings()
         self.show()

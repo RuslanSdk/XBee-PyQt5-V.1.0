@@ -67,13 +67,11 @@ class XBeeConnect(QObject):
 
         self.pan_id = self.local_device.get_parameter('ID')
         self.channel_ver = self.local_device.get_parameter('JV')
-        #self.coord_en = self.local_device.get_parameter("CE")
         self.node_id = self.local_device.get_node_id()
 
     def write_info(self, parameters):
 
         self.local_device.set_pan_id(hex_string_to_bytes(str(parameters[0])))
-        #self.local_device.set_parameter('CE', hex_string_to_bytes(str(parameters[1])))
         self.local_device.set_parameter('NI', bytearray(str(parameters[1]), 'utf8'))
 
         time.sleep(1)
@@ -82,7 +80,6 @@ class XBeeConnect(QObject):
         self.local_device.write_changes()
         time.sleep(1)
         self.new_pan_id = self.local_device.get_parameter('ID')
-        #self.new_coord_en = self.local_device.get_parameter('CE')
         self.new_node_id = self.local_device.get_node_id()
 
         print('ПАРАМЕТРЫ ОБНОВЛЕНЫ')
@@ -151,5 +148,3 @@ class XBeeConnect(QObject):
         self.local_device.apply_changes()
         self.local_device.write_changes()
         self.new_sm = self.local_device.get_parameter('SM')
-
-#TODO Привязать функции update_info_jv, apply_change_jv, update_info_sm, apply_change_sm к кнопкам соотвественно
