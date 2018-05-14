@@ -66,7 +66,6 @@ class XBeeConnect(QObject):
     def read_info(self):
 
         self.pan_id = self.local_device.get_parameter('ID')
-        self.channel_ver = self.local_device.get_parameter('JV')
         self.node_id = self.local_device.get_node_id()
 
     def write_info(self, parameters):

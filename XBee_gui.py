@@ -4,9 +4,9 @@
 import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QDialog, QGridLayout,
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
-                             QMessageBox)
+                             QMessageBox, QTableView)
 from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize, QAbstractTableModel, Qt, QModelIndex)
 from XBee_connect import XBeeConnect
 from digi.xbee.util.utils import hex_to_string
 import time
@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
 
     def init_ui(self):
 
-        self.resize(600, 600)
+        self.resize(890, 600)
         self.setWindowTitle('Конфигуратор модулей XBee')
         self.setWindowIcon(QIcon("images/zigbee_logo.png"))
         self.main_widget = QWidget()
@@ -241,6 +241,18 @@ class MainWindow(QMainWindow):
         self.init_toolbar()
         self.one_tab_settings()
         self.show()
+
+    def init_table(self, layout):
+        # Таблица: список подключенных устройств по com-порт
+
+        self.model = TableModel()
+        self.table = TableView()
+        header = self.table.horizontalHeader()
+        header.setStretchLastSection(True)
+        header.setMinimumSectionSize(200)
+        self.table.resizeColumnsToContents()
+        self.table.setModel(self.model)
+        layout.addWidget(self.table)
 
     def init_toolbar(self):
         # Верхняя панель управления
@@ -300,6 +312,9 @@ class MainWindow(QMainWindow):
         self.panel_parameters_layout = QGridLayout(self.panel_parameters_box)
         self.panel_info_box = QGroupBox()
         self.panel_info_layout = QHBoxLayout(self.panel_info_box)
+        self.list_devices_group = QGroupBox('XBee модули')
+        self.list_devices_layout = QVBoxLayout(self.list_devices_group)
+        self.init_table(self.list_devices_layout)
 
         # Поле: PAN ID
         self.pan_id_lbl = QLabel('PAN ID сети:')
@@ -419,6 +434,7 @@ class MainWindow(QMainWindow):
         self.hide_fields()
 
         self.tab_settings_layout.addWidget(self.panel_info_box)
+        self.tab_settings_layout.addWidget(self.list_devices_group)
         self.tab_settings_layout.addWidget(self.panel_control_box)
         self.tab_settings_layout.addWidget(self.panel_parameters_box)
 
@@ -451,6 +467,56 @@ class MainWindow(QMainWindow):
         self.sleep_mode_edit.hide()
         self.update_info_sm_btn.hide()
         self.apply_change_sm_btn.hide()
+
+
+class TableView(QTableView):
+
+    def __init__(self, parent=None):
+        super(TableView, self).__init__(parent=parent)
+
+
+class TableModel(QAbstractTableModel):
+
+    def __init__(self, parent=None):
+        super(TableModel, self).__init__(parent)
+        self.columnNames = ['Тип устройства', 'Идентификатор узла', 'MAC-адрес', 'COM-порт']
+        self.flows = {}
+        self.flow_id = 0
+
+    def rowCount(self, parent=None, *args, **kwargs):
+        return len(self.flows)
+
+    def columnCount(self, parent=None, *args, **kwargs):
+        return len(self.columnNames)
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            self.logger('not valid')
+            return None
+        if role == Qt.DisplayRole:
+            flow_desc = self.get_flow_by_id(index.row())
+            if index.column() == 0:
+                return "{}: {}".format(flow_desc[0][0], flow_desc[1][0])
+            if index.column() == 1:
+                return "{}: {}".format(flow_desc[0][1], flow_desc[1][1])
+            if index.column() == 2:
+                return str(self.flows[flow_desc]["count"])
+            if index.column() == 3:
+                return str(self.flows[flow_desc]['data_len'] / len(self.flows[flow_desc]['len_seq']))
+            if index.column() == 4:
+                min_timestamp = min(self.flows[flow_desc]['timestamp_list'])
+                max_timestamp = max(self.flows[flow_desc]['timestamp_list'])
+                return str(self.flows[flow_desc]['data_len'] / max_timestamp - min_timestamp)
+
+    def headerData(self, section, orientation, role=Qt.DisplayRole):
+        if role != Qt.DisplayRole:
+            return None
+        if orientation == Qt.Horizontal:
+            for i in range(self.columnCount()):
+                if section == i:
+                    return self.columnNames[i]
+
+        return None
 
 
 if __name__ == '__main__':
