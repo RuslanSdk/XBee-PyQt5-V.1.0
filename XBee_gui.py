@@ -6,8 +6,8 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QD
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
                              QMessageBox, QTableView)
 from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize, QAbstractTableModel, Qt, QModelIndex)
-from XBee_connect import XBeeConnect
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize)
+from XBee_connect import XBeeConnect, TableModel
 from digi.xbee.util.utils import hex_to_string
 import time
 
@@ -25,7 +25,7 @@ class MainWindow(QMainWindow):
     signal_start_connect = pyqtSignal()
     signal_read_info = pyqtSignal()
     signal_write_info = pyqtSignal(tuple)
-    signal_disconnect_module = pyqtSignal()
+    signal_disconnect_module = pyqtSignal(int)
     signal_info_type_s2c_dev = pyqtSignal()
     signal_update_info_id = pyqtSignal()
     signal_apply_change_id = pyqtSignal(str)
@@ -38,26 +38,23 @@ class MainWindow(QMainWindow):
     signal_update_info_sm = pyqtSignal()
     signal_apply_change_sm = pyqtSignal(str)
 
+
     def __init__(self, parent=None):
         super(MainWindow, self).__init__(parent)
-
-        self.init_ui()
-
-        # создаем экзмепляр класса XBeeConnect
         self.xbee_connect = XBeeConnect(self)
-
-    def start_connect_to_module_clicked(self):
-        # создаем и подключаем поток
         self.connection_thread = QThread()
         self.xbee_connect.moveToThread(self.connection_thread)
-
-        self.read_values()
         self.connection_thread.start()
-
         self.xbee_connect.successful_connection_signal.connect(self.success_connect)
         self.xbee_connect.error_connection_signal.connect(self.error_connect)
+        self.init_ui()
 
+    def start_connect_to_module_clicked(self):
+        # создаем экзмепляр класса XBeeConnect
+
+        self.read_values()
         self.signal_start_connect.emit()
+
 
     def read_info_clicked(self):
 
@@ -77,9 +74,9 @@ class MainWindow(QMainWindow):
         self.node_id_edit.setText(str(self.xbee_connect.new_node_id))
 
     def disconnect_module_clicked(self):
-
-        self.signal_disconnect_module.emit()
-        self.connection_thread.quit()
+        index = self.table.selectedIndexes()[0].row()
+        print(index)
+        self.signal_disconnect_module.emit(index)
         self.read_btn.setDisabled(True)
         self.write_btn.setDisabled(True)
         time.sleep(2)
@@ -172,56 +169,10 @@ class MainWindow(QMainWindow):
         self.disconnect_module_btn.setDisabled(False)
         self.icon_connect_disconnect.setPixmap(self.icon_connect)
 
-        self.type_firmware_devices()
-
     def type_firmware_devices(self):
         # Определение типа устройства и прошивки
 
-        if self.xbee_connect.type_device[0:2] == '21':
-            self.info_type_device.setText(module_type_dict.get('21'))
-            self.hide_fields()
-            print(module_type_dict.get('21'))
-        if self.xbee_connect.type_device[0:2] == '23':
-            self.info_type_device.setText(module_type_dict.get('23'))
-            self.coord_en_lbl.hide()
-            self.coord_en_edit.hide()
-            self.update_info_ce_btn.hide()
-            self.apply_change_ce_btn.hide()
-            self.channel_ver_lbl.show()
-            self.channel_ver_edit.show()
-            self.update_info_jv_btn.show()
-            self.apply_change_jv_btn.show()
-            self.sleep_mode_lbl.hide()
-            self.sleep_mode_edit.hide()
-            self.update_info_sm_btn.hide()
-            self.apply_change_sm_btn.hide()
-            print(module_type_dict.get('23'))
-        if self.xbee_connect.type_device[0:2] == '29':
-            self.info_type_device.setText(module_type_dict.get('29'))
-            print(module_type_dict.get('29'))
-        elif self.xbee_connect.type_device[0:2] == '40':
-            self.coord_en_lbl.show()
-            self.coord_en_edit.show()
-            self.update_info_ce_btn.show()
-            self.apply_change_ce_btn.show()
-            self.channel_ver_lbl.show()
-            self.channel_ver_edit.show()
-            self.update_info_jv_btn.show()
-            self.apply_change_jv_btn.show()
-            self.sleep_mode_lbl.show()
-            self.sleep_mode_edit.show()
-            self.update_info_sm_btn.show()
-            self.apply_change_sm_btn.show()
-            self.signal_info_type_s2c_dev.emit()
-            if (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01' and
-                    str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
-                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Coordinator')
-            elif (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '00' and
-                    str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
-                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Router')
-            elif (str(hex_to_string(self.xbee_connect.sleep_mode)) == '04' or
-                        str(hex_to_string(self.xbee_connect.sleep_mode)) == '05'):
-                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'End Device')
+        pass
 
     def error_connect(self):
 
@@ -239,19 +190,27 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.main_layout.addWidget(self.tabs)
         self.init_toolbar()
+        print("!!!!!!!!!!!init_toolbar")
         self.one_tab_settings()
+        print("!!!!!!!!!!!!one_tab_settings")
         self.show()
 
     def init_table(self, layout):
         # Таблица: список подключенных устройств по com-порт
 
-        self.model = TableModel()
+        self.model = self.xbee_connect.model
         self.table = TableView()
+
         header = self.table.horizontalHeader()
         header.setStretchLastSection(True)
         header.setMinimumSectionSize(200)
         self.table.resizeColumnsToContents()
-        self.table.setModel(self.model)
+        print("!!!!!!!!!!!!!!Таблица!!!!!!!!!!")
+        try:
+            self.table.setModel(self.model)
+        except Exception as e:
+            print("Exception!!!!!!!!!!!")
+            print(e)
         layout.addWidget(self.table)
 
     def init_toolbar(self):
@@ -260,7 +219,6 @@ class MainWindow(QMainWindow):
         self.toolbar = self.addToolBar('Меню')
         start_connect = QAction(QIcon('images/icon_plus.png'), 'Добавить XBee модуль', self)
         start_connect.triggered.connect(self.init_connect_dialog)
-
         self.toolbar.addAction(start_connect)
 
     def init_connect_dialog(self):
@@ -314,8 +272,9 @@ class MainWindow(QMainWindow):
         self.panel_info_layout = QHBoxLayout(self.panel_info_box)
         self.list_devices_group = QGroupBox('XBee модули')
         self.list_devices_layout = QVBoxLayout(self.list_devices_group)
+        print("!!!!!!!!!!!!!!!!!list_devices")
         self.init_table(self.list_devices_layout)
-
+        print("!!!!!!!!!!!!!!!!!init_table")
         # Поле: PAN ID
         self.pan_id_lbl = QLabel('PAN ID сети:')
         self.pan_id_edit = QLineEdit()
@@ -385,7 +344,7 @@ class MainWindow(QMainWindow):
         self.apply_change_sm_btn.setToolTip('Записать значение')
         self.apply_change_sm_btn.setIcon(QIcon('images/write_update_icon.png'))
         self.apply_change_sm_btn.setIconSize(QSize(20, 20))
-
+        print("!!!!!!!!!!!!!!!!read_button")
         self.read_btn = QPushButton('Обновить')
         self.write_btn = QPushButton('Записать')
         self.disconnect_module_btn = QPushButton('Отключить')
@@ -431,8 +390,6 @@ class MainWindow(QMainWindow):
         self.panel_parameters_layout.addWidget(self.update_info_sm_btn, 5, 2)
         self.panel_parameters_layout.addWidget(self.apply_change_sm_btn, 5, 3)
 
-        self.hide_fields()
-
         self.tab_settings_layout.addWidget(self.panel_info_box)
         self.tab_settings_layout.addWidget(self.list_devices_group)
         self.tab_settings_layout.addWidget(self.panel_control_box)
@@ -452,71 +409,11 @@ class MainWindow(QMainWindow):
         self.update_info_sm_btn.clicked.connect(self.update_info_sm_clicked)
         self.apply_change_sm_btn.clicked.connect(self.apply_change_sm_clicked)
 
-    def hide_fields(self):
-        # скрытие полей и кнопок
-
-        self.coord_en_lbl.hide()
-        self.coord_en_edit.hide()
-        self.update_info_ce_btn.hide()
-        self.apply_change_ce_btn.hide()
-        self.channel_ver_lbl.hide()
-        self.channel_ver_edit.hide()
-        self.update_info_jv_btn.hide()
-        self.apply_change_jv_btn.hide()
-        self.sleep_mode_lbl.hide()
-        self.sleep_mode_edit.hide()
-        self.update_info_sm_btn.hide()
-        self.apply_change_sm_btn.hide()
-
 
 class TableView(QTableView):
 
     def __init__(self, parent=None):
         super(TableView, self).__init__(parent=parent)
-
-
-class TableModel(QAbstractTableModel):
-
-    def __init__(self, parent=None):
-        super(TableModel, self).__init__(parent)
-        self.columnNames = ['Тип устройства', 'Идентификатор узла', 'MAC-адрес', 'COM-порт']
-        self.flows = {}
-        self.flow_id = 0
-
-    def rowCount(self, parent=None, *args, **kwargs):
-        return len(self.flows)
-
-    def columnCount(self, parent=None, *args, **kwargs):
-        return len(self.columnNames)
-
-    def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid():
-            self.logger('not valid')
-            return None
-        if role == Qt.DisplayRole:
-            flow_desc = self.get_flow_by_id(index.row())
-            if index.column() == 0:
-                return "{}: {}".format(flow_desc[0][0], flow_desc[1][0])
-            if index.column() == 1:
-                return "{}: {}".format(flow_desc[0][1], flow_desc[1][1])
-            if index.column() == 2:
-                return str(self.flows[flow_desc]["count"])
-            if index.column() == 3:
-                return str(self.flows[flow_desc]['data_len'] / len(self.flows[flow_desc]['len_seq']))
-            if index.column() == 4:
-                min_timestamp = min(self.flows[flow_desc]['timestamp_list'])
-                max_timestamp = max(self.flows[flow_desc]['timestamp_list'])
-                return str(self.flows[flow_desc]['data_len'] / max_timestamp - min_timestamp)
-
-    def headerData(self, section, orientation, role=Qt.DisplayRole):
-        if role != Qt.DisplayRole:
-            return None
-        if orientation == Qt.Horizontal:
-            for i in range(self.columnCount()):
-                if section == i:
-                    return self.columnNames[i]
-
-        return None
 
 
 if __name__ == '__main__':
