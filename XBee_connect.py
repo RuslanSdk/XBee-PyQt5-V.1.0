@@ -95,9 +95,19 @@ class XBeeConnect(QObject):
 
     def read_info(self, module_id):
 
+        print('llllllllllllllll')
+
         module = self.get_module_by_id(module_id)
-        module.pan_id = self.local_device.get_parameter('ID')
-        module.node_id = self.local_device.get_node_id()
+        #print(module.get_parameter("ID"))
+        self.pan_id = module.get_parameter('ID')
+        print(self.pan_id)
+        self.node_id_current = module.get_node_id()
+        print(self.node_id_current)
+        #module.pan_id = module.get_parameter('ID')
+        #module.node_id = module.get_node_id()
+
+        #id_mod = module.pan_id
+        #print(id_mod)
 
     def close_port(self, module_id):
         module = self.get_module_by_id(module_id)
@@ -114,6 +124,7 @@ class XBeeConnect(QObject):
         module.sleep_mode = module.get_parameter('SM')
 
     def update_info_id(self, module_id):
+        print('AAAAAAAAAA55555555')
         module = self.get_module_by_id(module_id)
         module.info_id = module.get_parameter('ID')
 

@@ -4,13 +4,14 @@
 import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QDialog, QGridLayout,
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
-                             QMessageBox, QTableView)
-from PyQt5.QtGui import (QIcon, QPixmap)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize)
+                             QMessageBox, QTableView, QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsItem,
+                             QGraphicsPixmapItem)
+from PyQt5.QtGui import (QIcon, QPixmap, QBrush, QPen)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt)
 from XBee_connect import XBeeConnect, TableModel
 from digi.xbee.util.utils import hex_to_string
 import time
-
+import random
 
 module_type_dict = {'21': 'S2B ZigBee Coordinator API',
                     '23': 'S2B ZigBee Router API',
@@ -23,7 +24,7 @@ module_type_dict = {'21': 'S2B ZigBee Coordinator API',
 class MainWindow(QMainWindow):
 
     signal_start_connect = pyqtSignal()
-    signal_read_info = pyqtSignal()
+    signal_read_info = pyqtSignal(int)
     signal_write_info = pyqtSignal(tuple)
     signal_disconnect_module = pyqtSignal(int)
     signal_info_type_s2c_dev = pyqtSignal()
@@ -57,10 +58,16 @@ class MainWindow(QMainWindow):
 
 
     def read_info_clicked(self):
+        print('kkkkkkkkkkkkkk')
 
-        self.signal_read_info.emit()
+        index = self.table.selectedIndexes()[0].row()
+        print(index)
+        #self.signal_disconnect_module.emit(index)
+
+        self.signal_read_info.emit(index)
+        print('signal otpavils')
         self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.pan_id)))
-        self.node_id_edit.setText(str(self.xbee_connect.node_id))
+        self.node_id_edit.setText(str(self.xbee_connect.node_id_current))
 
     def write_info_clicked(self):
 
@@ -79,10 +86,6 @@ class MainWindow(QMainWindow):
         self.signal_disconnect_module.emit(index)
         self.read_btn.setDisabled(True)
         self.write_btn.setDisabled(True)
-        time.sleep(2)
-        self.disconnect_module_btn.setDisabled(True)
-        self.icon_connect_disconnect.setPixmap(self.icon_disconnect)
-        print('ПОТОК ОСТАНОВЛЕН')
 
     def read_values(self):
 
@@ -172,7 +175,26 @@ class MainWindow(QMainWindow):
     def type_firmware_devices(self):
         # Определение типа устройства и прошивки
 
-        pass
+        if self.xbee_connect.local_device.type_device[0:2] == '21':
+            self.info_type_device.setText(module_type_dict.get('21'))
+            print(module_type_dict.get('21'))
+        if self.xbee_connect.type_device[0:2] == '23':
+            self.info_type_device.setText(module_type_dict.get('23'))
+            print(module_type_dict.get('23'))
+        if self.xbee_connect.type_device[0:2] == '29':
+            self.info_type_device.setText(module_type_dict.get('29'))
+            print(module_type_dict.get('29'))
+        elif self.xbee_connect.type_device[0:2] == '40':
+            self.signal_info_type_s2c_dev.emit()
+            if (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01' and
+                    str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
+                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Coordinator')
+            elif (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '00' and
+                  str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
+                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Router')
+            elif (str(hex_to_string(self.xbee_connect.sleep_mode)) == '04' or
+                  str(hex_to_string(self.xbee_connect.sleep_mode)) == '05'):
+                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'End Device')
 
     def error_connect(self):
 
@@ -182,6 +204,7 @@ class MainWindow(QMainWindow):
     def init_ui(self):
 
         self.resize(890, 600)
+        #self.setFixedSize(800, 600)
         self.setWindowTitle('Конфигуратор модулей XBee')
         self.setWindowIcon(QIcon("images/zigbee_logo.png"))
         self.main_widget = QWidget()
@@ -190,9 +213,8 @@ class MainWindow(QMainWindow):
         self.tabs = QTabWidget()
         self.main_layout.addWidget(self.tabs)
         self.init_toolbar()
-        print("!!!!!!!!!!!init_toolbar")
         self.one_tab_settings()
-        print("!!!!!!!!!!!!one_tab_settings")
+        self.two_tab_network_map()
         self.show()
 
     def init_table(self, layout):
@@ -270,7 +292,7 @@ class MainWindow(QMainWindow):
         self.panel_parameters_layout = QGridLayout(self.panel_parameters_box)
         self.panel_info_box = QGroupBox()
         self.panel_info_layout = QHBoxLayout(self.panel_info_box)
-        self.list_devices_group = QGroupBox('XBee модули')
+        self.list_devices_group = QGroupBox('Радио модули')
         self.list_devices_layout = QVBoxLayout(self.list_devices_group)
         print("!!!!!!!!!!!!!!!!!list_devices")
         self.init_table(self.list_devices_layout)
@@ -390,7 +412,7 @@ class MainWindow(QMainWindow):
         self.panel_parameters_layout.addWidget(self.update_info_sm_btn, 5, 2)
         self.panel_parameters_layout.addWidget(self.apply_change_sm_btn, 5, 3)
 
-        self.tab_settings_layout.addWidget(self.panel_info_box)
+        #self.tab_settings_layout.addWidget(self.panel_info_box)
         self.tab_settings_layout.addWidget(self.list_devices_group)
         self.tab_settings_layout.addWidget(self.panel_control_box)
         self.tab_settings_layout.addWidget(self.panel_parameters_box)
@@ -409,11 +431,52 @@ class MainWindow(QMainWindow):
         self.update_info_sm_btn.clicked.connect(self.update_info_sm_clicked)
         self.apply_change_sm_btn.clicked.connect(self.apply_change_sm_clicked)
 
+    def two_tab_network_map(self):
+
+        x = random.randrange(50, 800)
+        y = random.randrange(50, 500)
+
+        self.tab_network_map = QWidget()
+        self.tabs.addTab(self.tab_network_map, "Карта сети")
+        self.tab_network_map_layout = QVBoxLayout(self.tab_network_map)
+
+        scene = QGraphicsScene()
+        scene.setItemIndexMethod(1)
+
+        view = QGraphicsView(scene, self.tab_network_map)
+        view.resize(866, 522)
+        scene.setSceneRect(0, 0, 766, 422)
+
+        greenBrush = QBrush(Qt.green)
+        blackPen = QPen(Qt.black)
+        blackPen.setWidth(2)
+
+        figure = scene.addRect(-30, -30, 60, 60, blackPen, greenBrush)
+        figure.setPos(x, y)
+        figure.setFlag(QGraphicsRectItem.ItemIsMovable)
+
+        pixmap = scene.addPixmap(QPixmap('images/icon_plus.png'))
+
+
+
 
 class TableView(QTableView):
 
     def __init__(self, parent=None):
         super(TableView, self).__init__(parent=parent)
+
+
+class NetworkMapView(QGraphicsView):
+    def __init__(self, *args, **kwargs):
+        super(NetworkMapView, self).__init__(*args, **kwargs)
+
+    def contextMenuEvent(self, event):
+        pass
+
+
+class NetworkMapScene(QGraphicsScene):
+    def __init__(self, *args, **kwargs):
+        super(NetworkMapScene, self).__init__(*args, **kwargs)
 
 
 if __name__ == '__main__':
