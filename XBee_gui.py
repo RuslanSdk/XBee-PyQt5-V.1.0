@@ -39,8 +39,8 @@ class MainWindow(QMainWindow):
     signal_update_info_sm = pyqtSignal()
     signal_apply_change_sm = pyqtSignal(str)
 
-
     def __init__(self, parent=None):
+
         super(MainWindow, self).__init__(parent)
         self.xbee_connect = XBeeConnect(self)
         self.connection_thread = QThread()
@@ -56,16 +56,11 @@ class MainWindow(QMainWindow):
         self.read_values()
         self.signal_start_connect.emit()
 
-
     def read_info_clicked(self):
-        print('kkkkkkkkkkkkkk')
 
         index = self.table.selectedIndexes()[0].row()
         print(index)
-        #self.signal_disconnect_module.emit(index)
-
         self.signal_read_info.emit(index)
-        print('signal otpavils')
         self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.pan_id)))
         self.node_id_edit.setText(str(self.xbee_connect.node_id_current))
 
@@ -81,6 +76,7 @@ class MainWindow(QMainWindow):
         self.node_id_edit.setText(str(self.xbee_connect.new_node_id))
 
     def disconnect_module_clicked(self):
+
         index = self.table.selectedIndexes()[0].row()
         print(index)
         self.signal_disconnect_module.emit(index)
@@ -88,7 +84,6 @@ class MainWindow(QMainWindow):
         self.write_btn.setDisabled(True)
 
     def read_values(self):
-
         # функция считывания значений COM и Speed для подключения к модулю
 
         com = self.com_list.currentText()
@@ -204,7 +199,6 @@ class MainWindow(QMainWindow):
     def init_ui(self):
 
         self.resize(890, 600)
-        #self.setFixedSize(800, 600)
         self.setWindowTitle('Конфигуратор модулей XBee')
         self.setWindowIcon(QIcon("images/zigbee_logo.png"))
         self.main_widget = QWidget()
@@ -222,16 +216,13 @@ class MainWindow(QMainWindow):
 
         self.model = self.xbee_connect.model
         self.table = TableView()
-
         header = self.table.horizontalHeader()
         header.setStretchLastSection(True)
         header.setMinimumSectionSize(200)
         self.table.resizeColumnsToContents()
-        print("!!!!!!!!!!!!!!Таблица!!!!!!!!!!")
         try:
             self.table.setModel(self.model)
         except Exception as e:
-            print("Exception!!!!!!!!!!!")
             print(e)
         layout.addWidget(self.table)
 
@@ -262,17 +253,14 @@ class MainWindow(QMainWindow):
         self.speed_list.addItems(['9600', '115200'])
         self.connect_btn = QPushButton('Подключиться')
         self.cancel_btn = QPushButton('Отмена')
-
         connect_dialog_layout.addWidget(self.com_lbl, 1, 0)
         connect_dialog_layout.addWidget(self.com_list, 1, 1)
         connect_dialog_layout.addWidget(self.speed_lbl, 2, 0)
         connect_dialog_layout.addWidget(self.speed_list, 2, 1)
         connect_dialog_layout.addWidget(self.connect_btn, 3, 0)
         connect_dialog_layout.addWidget(self.cancel_btn, 3, 1)
-
         self.connect_btn.clicked.connect(self.start_connect_to_module_clicked)
         self.cancel_btn.clicked.connect(self.close_connect_dialog)
-
         self.connect_dialog.exec_()
 
     def close_connect_dialog(self):
@@ -294,9 +282,7 @@ class MainWindow(QMainWindow):
         self.panel_info_layout = QHBoxLayout(self.panel_info_box)
         self.list_devices_group = QGroupBox('Радио модули')
         self.list_devices_layout = QVBoxLayout(self.list_devices_group)
-        print("!!!!!!!!!!!!!!!!!list_devices")
         self.init_table(self.list_devices_layout)
-        print("!!!!!!!!!!!!!!!!!init_table")
         # Поле: PAN ID
         self.pan_id_lbl = QLabel('PAN ID сети:')
         self.pan_id_edit = QLineEdit()
@@ -366,7 +352,6 @@ class MainWindow(QMainWindow):
         self.apply_change_sm_btn.setToolTip('Записать значение')
         self.apply_change_sm_btn.setIcon(QIcon('images/write_update_icon.png'))
         self.apply_change_sm_btn.setIconSize(QSize(20, 20))
-        print("!!!!!!!!!!!!!!!!read_button")
         self.read_btn = QPushButton('Обновить')
         self.write_btn = QPushButton('Записать')
         self.disconnect_module_btn = QPushButton('Отключить')
@@ -456,8 +441,6 @@ class MainWindow(QMainWindow):
         figure.setFlag(QGraphicsRectItem.ItemIsMovable)
 
         pixmap = scene.addPixmap(QPixmap('images/icon_plus.png'))
-
-
 
 
 class TableView(QTableView):

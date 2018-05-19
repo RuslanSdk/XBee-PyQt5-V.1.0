@@ -16,7 +16,6 @@ class XBeeConnect(QObject):
     def __init__(self, parent=None):
 
         super(XBeeConnect, self).__init__(parent)
-
         self.local_device = None
         self.com = ''
         self.speed = ''
@@ -41,12 +40,10 @@ class XBeeConnect(QObject):
         self.parent.signal_update_info_sm.connect(self.update_info_sm)
         self.parent.signal_apply_change_sm.connect(self.apply_change_sm)
 
-
     @pyqtSlot()
     def start_connection(self):
 
         local_device = XBeeDevice(self.com, self.speed)
-
         try:
             local_device.open()
             self.connected = True
@@ -63,9 +60,7 @@ class XBeeConnect(QObject):
             local_device.com = self.com
 
             self.model.modules[local_device.mac] = {"id": self.model.module_id, "module": local_device}
-
             self.successful_connection_signal.emit()
-
             self.update_table()
 
         except Exception as e:
@@ -75,6 +70,7 @@ class XBeeConnect(QObject):
             local_device.close()
 
     def update_table(self, add=True):
+
         if add:
             self.model.insertRows(len(self.model.modules) - 1, 1)
             print(len(self.model.modules))
@@ -91,25 +87,19 @@ class XBeeConnect(QObject):
         self.model.dataChanged.emit(topLeft, bottomRight)
 
     def get_module_by_id(self, module_id):
+
         return self.model.modules[self.model.get_address_by_id(module_id)]["module"]
 
     def read_info(self, module_id):
 
-        print('llllllllllllllll')
-
         module = self.get_module_by_id(module_id)
-        #print(module.get_parameter("ID"))
         self.pan_id = module.get_parameter('ID')
         print(self.pan_id)
         self.node_id_current = module.get_node_id()
         print(self.node_id_current)
-        #module.pan_id = module.get_parameter('ID')
-        #module.node_id = module.get_node_id()
-
-        #id_mod = module.pan_id
-        #print(id_mod)
 
     def close_port(self, module_id):
+
         module = self.get_module_by_id(module_id)
         del self.model.modules[module.mac]
         module.close()
@@ -118,17 +108,18 @@ class XBeeConnect(QObject):
         self.update_table(add=False)
 
     def info_type_s2c_dev(self, module_id):
-        module = self.get_module_by_id(module_id)
 
+        module = self.get_module_by_id(module_id)
         module.coordinator_enabled = module.get_parameter('CE')
         module.sleep_mode = module.get_parameter('SM')
 
     def update_info_id(self, module_id):
-        print('AAAAAAAAAA55555555')
+
         module = self.get_module_by_id(module_id)
         module.info_id = module.get_parameter('ID')
 
     def apply_change_id(self, pan_id, module_id):
+
         module = self.get_module_by_id(module_id)
         module.set_pan_id(hex_string_to_bytes(str(pan_id)))
         module.apply_changes()
@@ -136,10 +127,12 @@ class XBeeConnect(QObject):
         module.new_id = module.get_parameter('ID')
 
     def update_info_ni(self, module_id):
+
         module = self.get_module_by_id(module_id)
         module.info_ni = module.get_node_id()
 
     def apply_change_ni(self, ni, module_id):
+
         module = self.get_module_by_id(module_id)
         module.set_parameter('NI', bytearray(str(ni), 'utf8'))
         module.apply_changes()
@@ -147,10 +140,12 @@ class XBeeConnect(QObject):
         module.new_ni = module.get_node_id()
 
     def update_info_ce(self, module_id):
+
         module = self.get_module_by_id(module_id)
         module.info_ce = module.get_parameter('CE')
 
     def apply_change_ce(self, ce, module_id):
+
         module = self.get_module_by_id(module_id)
         module.set_parameter('CE', hex_string_to_bytes(str(ce)))
         module.apply_changes()
@@ -158,10 +153,12 @@ class XBeeConnect(QObject):
         module.new_ce = module.get_parameter('CE')
 
     def update_info_jv(self, module_id):
+
         module = self.get_module_by_id(module_id)
         module.info_jv = module.get_parameter('JV')
 
     def apply_change_jv(self, jv, module_id):
+
         module = self.get_module_by_id(module_id)
         module.set_parameter('JV', hex_string_to_bytes(str(jv)))
         module.apply_changes()
@@ -169,31 +166,38 @@ class XBeeConnect(QObject):
         module.new_jv = module.get_parameter('JV')
 
     def update_info_sm(self, module_id):
+
         module = self.get_module_by_id(module_id)
         module.info_sm = module.get_parameter('SM')
 
     def apply_change_sm(self, sm, module_id):
+
         module = self.get_module_by_id(module_id)
         module.set_parameter('SM', hex_string_to_bytes(str(sm)))
         module.apply_changes()
         module.write_changes()
         module.new_sm = module.get_parameter('SM')
 
+
 class TableModel(QAbstractTableModel):
 
     def __init__(self, parent=None):
+
         super(TableModel, self).__init__(parent)
         self.columnNames = ['Тип устройства', 'Идентификатор узла', 'MAC-адрес', 'COM-порт']
         self.modules = dict()
         self.module_id = 0
 
     def rowCount(self, parent=None, *args, **kwargs):
+
         return len(self.modules)
 
     def columnCount(self, parent=None, *args, **kwargs):
+
         return len(self.columnNames)
 
     def data(self, index, role=Qt.DisplayRole):
+
         if not index.isValid():
             print('not valid')
             return None
@@ -214,12 +218,13 @@ class TableModel(QAbstractTableModel):
                 return str(module.com)
 
     def insertRows(self, pos=0, count=1, parent=None):
+
         self.beginInsertRows(QModelIndex(), pos, pos + count - 1)
         self.endInsertRows()
-
         return True
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Horizontal:
@@ -230,6 +235,7 @@ class TableModel(QAbstractTableModel):
         return None
 
     def get_address_by_id(self, id):
+
         for k, v in self.modules.items():
             if v["id"] == id:
                 return k
