@@ -32,12 +32,6 @@ class MainWindow(QMainWindow):
     signal_apply_change_id = pyqtSignal(int, str)
     signal_update_info_ni = pyqtSignal(int)
     signal_apply_change_ni = pyqtSignal(int, str)
-    signal_update_info_ce = pyqtSignal()
-    signal_apply_change_ce = pyqtSignal(str)
-    signal_update_info_jv = pyqtSignal()
-    signal_apply_change_jv = pyqtSignal(str)
-    signal_update_info_sm = pyqtSignal()
-    signal_apply_change_sm = pyqtSignal(str)
     signal_coordinator_enable = pyqtSignal(int)
     signal_router_enable = pyqtSignal(int)
     signal_end_dev_enable = pyqtSignal(int)
@@ -190,73 +184,17 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, 'Ошибка', 'Не выбран модуль из таблицы!!!')
             print(e)
 
-    """
-    def update_info_ce_clicked(self):
-
-        self.signal_update_info_ce.emit()
-        self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.info_ce)))
-
-    def apply_change_ce_clicked(self):
-
-        param_ce = self.coord_en_edit.text()
-        self.signal_apply_change_ce.emit(param_ce)
-        self.coord_en_edit.setText(str(hex_to_string(self.xbee_connect.new_ce)))
-
-    def update_info_jv_clicked(self):
-
-        self.signal_update_info_jv.emit()
-        self.channel_ver_edit.setText(str(hex_to_string(self.xbee_connect.info_jv)))
-
-    def apply_change_jv_clicked(self):
-
-        param_jv = self.channel_ver_edit.text()
-        self.signal_apply_change_jv.emit(param_jv)
-        self.channel_ver_edit.setText(str(hex_to_string(self.xbee_connect.new_jv)))
-
-    def update_info_sm_clicked(self):
-
-        self.signal_update_info_sm.emit()
-        self.sleep_mode_edit.setText(str(hex_to_string(self.xbee_connect.info_sm)))
-
-    def apply_change_sm_clicked(self):
-
-        param_sm = self.sleep_mode_edit.text()
-        self.signal_apply_change_sm.emit(param_sm)
-        self.sleep_mode_edit.setText(str(hex_to_string(self.xbee_connect.new_sm)))
-    """
-
     def success_connect(self):
 
         self.connect_dialog.close()
         self.read_btn.setDisabled(False)
         self.write_btn.setDisabled(False)
         self.disconnect_module_btn.setDisabled(False)
-        self.icon_connect_disconnect.setPixmap(self.icon_connect)
         self.on_all_btn()
 
     def type_firmware_devices(self):
         # Определение типа устройства и прошивки
-
-        if self.xbee_connect.local_device.type_device[0:2] == '21':
-            self.info_type_device.setText(module_type_dict.get('21'))
-            print(module_type_dict.get('21'))
-        if self.xbee_connect.type_device[0:2] == '23':
-            self.info_type_device.setText(module_type_dict.get('23'))
-            print(module_type_dict.get('23'))
-        if self.xbee_connect.type_device[0:2] == '29':
-            self.info_type_device.setText(module_type_dict.get('29'))
-            print(module_type_dict.get('29'))
-        elif self.xbee_connect.type_device[0:2] == '40':
-            self.signal_info_type_s2c_dev.emit()
-            if (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '01' and
-                    str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
-                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Coordinator')
-            elif (str(hex_to_string(self.xbee_connect.coordinator_enabled)) == '00' and
-                  str(hex_to_string(self.xbee_connect.sleep_mode)) == '00'):
-                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'Router')
-            elif (str(hex_to_string(self.xbee_connect.sleep_mode)) == '04' or
-                  str(hex_to_string(self.xbee_connect.sleep_mode)) == '05'):
-                self.info_type_device.setText(module_type_dict.get('40') + ': ' + 'End Device')
+        pass
 
     def error_connect(self):
 
@@ -389,66 +327,18 @@ class MainWindow(QMainWindow):
         self.end_device_enable_btn.setFixedHeight(40)
         self.end_device_enable_btn.setStyleSheet('font-size: 14px;')
 
-        """
-        # Поле: Режим координатор
-        self.coord_en_lbl = QLabel('Режим координатор:')
-        self.coord_en_edit = QLineEdit()
-
-        self.update_info_ce_btn = QPushButton()
-        self.update_info_ce_btn.setToolTip('Обновить значение')
-        self.update_info_ce_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
-        self.update_info_ce_btn.setIconSize(QSize(20, 20))
-
-        self.apply_change_ce_btn = QPushButton()
-        self.apply_change_ce_btn.setToolTip('Записать значение')
-        self.apply_change_ce_btn.setIcon(QIcon('images/write_update_icon.png'))
-        self.apply_change_ce_btn.setIconSize(QSize(20, 20))
-
-        # Поле: Проверка канала
-        self.channel_ver_lbl = QLabel('Проверка канала:')
-        self.channel_ver_edit = QLineEdit()
-
-        self.update_info_jv_btn = QPushButton()
-        self.update_info_jv_btn.setToolTip('Обновить значение')
-        self.update_info_jv_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
-        self.update_info_jv_btn.setIconSize(QSize(20, 20))
-
-        self.apply_change_jv_btn = QPushButton()
-        self.apply_change_jv_btn.setToolTip('Записать значение')
-        self.apply_change_jv_btn.setIcon(QIcon('images/write_update_icon.png'))
-        self.apply_change_jv_btn.setIconSize(QSize(20, 20))
-
-        # Поле: Режим сна
-        self.sleep_mode_lbl = QLabel('Режим сна:')
-        self.sleep_mode_edit = QLineEdit()
-
-        self.update_info_sm_btn = QPushButton()
-        self.update_info_sm_btn.setToolTip('Обновить значение')
-        self.update_info_sm_btn.setIcon(QIcon('images/refresh_parameter_icon.png'))
-        self.update_info_sm_btn.setIconSize(QSize(20, 20))
-
-        self.apply_change_sm_btn = QPushButton()
-        self.apply_change_sm_btn.setToolTip('Записать значение')
-        self.apply_change_sm_btn.setIcon(QIcon('images/write_update_icon.png'))
-        self.apply_change_sm_btn.setIconSize(QSize(20, 20))
-        """
         self.read_btn = QPushButton('Обновить')
         self.read_btn.setFixedHeight(40)
         self.read_btn.setStyleSheet('font-size: 14px;')
+
         self.write_btn = QPushButton('Записать')
         self.write_btn.setFixedHeight(40)
         self.write_btn.setStyleSheet('font-size: 14px;')
+
         self.disconnect_module_btn = QPushButton('Отключить')
         self.disconnect_module_btn.setFixedHeight(40)
         self.disconnect_module_btn.setStyleSheet('font-size: 14px;')
-        self.info_type_device = QLabel()
-        self.icon_connect = QPixmap('images/connect_icon.png')
-        self.icon_disconnect = QPixmap('images/disconnect_icon.png')
-        self.icon_connect_disconnect = QLabel()
-        self.icon_connect_disconnect.setPixmap(self.icon_disconnect)
 
-        #self.basic_param_layout.addWidget(self.info_type_device)
-        #self.basic_param_layout.addWidget(self.icon_connect_disconnect)
         # pan id
         self.basic_param_layout.addWidget(self.pan_id_lbl)
         self.basic_param_layout.addWidget(self.pan_id_edit)
@@ -464,21 +354,9 @@ class MainWindow(QMainWindow):
         self.panel_control_layout.addWidget(self.write_btn)
         self.panel_control_layout.addWidget(self.disconnect_module_btn)
 
-        # coordinator enabled
         self.panel_parameters_layout.addWidget(self.coordinator_enable_btn)
-        #self.panel_parameters_layout.addWidget(self.coord_en_edit, 3, 1)
-        #self.panel_parameters_layout.addWidget(self.update_info_ce_btn, 3, 2)
-        #self.panel_parameters_layout.addWidget(self.apply_change_ce_btn, 3, 3)
-        # channel verification
         self.panel_parameters_layout.addWidget(self.router_enable_btn)
-        #self.panel_parameters_layout.addWidget(self.channel_ver_edit, 4, 1)
-        #self.panel_parameters_layout.addWidget(self.update_info_jv_btn, 4, 2)
-        #self.panel_parameters_layout.addWidget(self.apply_change_jv_btn, 4, 3)
-        # sleep mode
         self.panel_parameters_layout.addWidget(self.end_device_enable_btn)
-        #self.panel_parameters_layout.addWidget(self.sleep_mode_edit, 5, 1)
-        #self.panel_parameters_layout.addWidget(self.update_info_sm_btn, 5, 2)
-        #self.panel_parameters_layout.addWidget(self.apply_change_sm_btn, 5, 3)
 
         self.tab_settings_layout.addWidget(self.list_devices_group)
         self.tab_settings_layout.addWidget(self.panel_control_box)
@@ -495,7 +373,6 @@ class MainWindow(QMainWindow):
         self.coordinator_enable_btn.clicked.connect(self.coordinator_enable_clicked)
         self.router_enable_btn.clicked.connect(self.router_enable_clicked)
         self.end_device_enable_btn.clicked.connect(self.end_dev_enable_clicked)
-
 
         self.off_all_btn()
 

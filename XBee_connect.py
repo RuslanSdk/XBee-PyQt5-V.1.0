@@ -34,12 +34,6 @@ class XBeeConnect(QObject):
         self.parent.signal_apply_change_id.connect(self.apply_change_id)
         self.parent.signal_update_info_ni.connect(self.update_info_ni)
         self.parent.signal_apply_change_ni.connect(self.apply_change_ni)
-        self.parent.signal_update_info_ce.connect(self.update_info_ce)
-        self.parent.signal_apply_change_ce.connect(self.apply_change_ce)
-        self.parent.signal_update_info_jv.connect(self.update_info_jv)
-        self.parent.signal_apply_change_jv.connect(self.apply_change_jv)
-        self.parent.signal_update_info_sm.connect(self.update_info_sm)
-        self.parent.signal_apply_change_sm.connect(self.apply_change_sm)
         self.parent.signal_coordinator_enable.connect(self.coord_en)
         self.parent.signal_router_enable.connect(self.router_en)
         self.parent.signal_end_dev_enable.connect(self.end_dev_en)
@@ -111,7 +105,6 @@ class XBeeConnect(QObject):
         module.write_changes()
         self.new_pan_id = module.get_parameter('ID')
         self.new_node_id = module.get_node_id()
-        print('DLY TESTA OK NORM')
 
     def close_port(self, module_id):
 
@@ -153,45 +146,6 @@ class XBeeConnect(QObject):
         module.apply_changes()
         module.write_changes()
         self.new_ni = module.get_node_id()
-
-    def update_info_ce(self, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.info_ce = module.get_parameter('CE')
-
-    def apply_change_ce(self, ce, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.set_parameter('CE', hex_string_to_bytes(str(ce)))
-        module.apply_changes()
-        module.write_changes()
-        module.new_ce = module.get_parameter('CE')
-
-    def update_info_jv(self, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.info_jv = module.get_parameter('JV')
-
-    def apply_change_jv(self, jv, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.set_parameter('JV', hex_string_to_bytes(str(jv)))
-        module.apply_changes()
-        module.write_changes()
-        module.new_jv = module.get_parameter('JV')
-
-    def update_info_sm(self, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.info_sm = module.get_parameter('SM')
-
-    def apply_change_sm(self, sm, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.set_parameter('SM', hex_string_to_bytes(str(sm)))
-        module.apply_changes()
-        module.write_changes()
-        module.new_sm = module.get_parameter('SM')
 
     def coord_en(self, module_id):
 
