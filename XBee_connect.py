@@ -2,7 +2,8 @@
 # Функции организации подкючения и передачи команд
 
 from PyQt5.QtCore import (QObject, pyqtSlot, pyqtSignal, QAbstractTableModel, QModelIndex, Qt)
-from digi.xbee.devices import (XBeeDevice)
+from digi.xbee.devices import (XBeeDevice, RemoteXBeeDevice, XBee64BitAddress)
+from digi.xbee.models.status import NetworkDiscoveryStatus
 from digi.xbee.util.utils import hex_string_to_bytes
 import time
 from digi.xbee.util.utils import hex_to_string
@@ -37,6 +38,8 @@ class XBeeConnect(QObject):
         self.parent.signal_coordinator_enable.connect(self.coord_en)
         self.parent.signal_router_enable.connect(self.router_en)
         self.parent.signal_end_dev_enable.connect(self.end_dev_en)
+
+        self.parent.signal_search_devices.connect(self.search_devices)
 
     @pyqtSlot()
     def start_connection(self):
@@ -114,6 +117,36 @@ class XBeeConnect(QObject):
         print(self.model.modules)
         print('ПОРТ ЗАКРЫТ')
         self.update_table(add=False)
+
+    def search_devices(self, module_id):
+
+        module = self.get_module_by_id(module_id)
+
+        xbee_network = module.get_network()
+
+        xbee_network.set_discovery_timeout(5)  # 5 seconds.
+
+        xbee_network.clear()
+
+        # Callback for discovered devices.
+        def callback_device_discovered(remote):
+            print("Device discovered: %s" % remote)
+            print(remote.get_64bit_addr())
+
+        # Callback for discovery finished.
+        def callback_discovery_finished(status):
+            if status == NetworkDiscoveryStatus.SUCCESS:
+                print("Discovery process finished successfully.")
+            else:
+                print("There was an error discovering devices: %s" % status.description)
+
+        xbee_network.add_device_discovered_callback(callback_device_discovered)
+
+        xbee_network.add_discovery_process_finished_callback(callback_discovery_finished)
+
+        xbee_network.start_discovery_process()
+
+        print("Discovering remote XBee devices...")
 
     def info_type_s2c_dev(self, module_id):
 

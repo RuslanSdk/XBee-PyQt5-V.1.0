@@ -36,6 +36,8 @@ class MainWindow(QMainWindow):
     signal_router_enable = pyqtSignal(int)
     signal_end_dev_enable = pyqtSignal(int)
 
+    signal_search_devices = pyqtSignal(int)
+
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
@@ -184,6 +186,12 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, 'Ошибка', 'Не выбран модуль из таблицы!!!')
             print(e)
 
+    def search_devices_clicked(self):
+
+        index = self.table.selectedIndexes()[0].row()
+        self.signal_search_devices.emit(index)
+
+
     def success_connect(self):
 
         self.connect_dialog.close()
@@ -236,8 +244,11 @@ class MainWindow(QMainWindow):
 
         self.toolbar = self.addToolBar('Меню')
         start_connect = QAction(QIcon('images/icon_plus.png'), 'Добавить XBee модуль', self)
+        search_devices = QAction(QIcon('images/search_dev_icon'), 'Поиск устройств', self)
         start_connect.triggered.connect(self.init_connect_dialog)
+        search_devices.triggered.connect(self.search_devices_clicked)
         self.toolbar.addAction(start_connect)
+        self.toolbar.addAction(search_devices)
 
     def init_connect_dialog(self):
         # Модальное окно подключения
@@ -378,29 +389,28 @@ class MainWindow(QMainWindow):
 
     def two_tab_network_map(self):
 
-        x = random.randrange(50, 800)
-        y = random.randrange(50, 500)
-
         self.tab_network_map = QWidget()
         self.tabs.addTab(self.tab_network_map, "Карта сети")
         self.tab_network_map_layout = QVBoxLayout(self.tab_network_map)
 
-        scene = QGraphicsScene()
-        scene.setItemIndexMethod(1)
+        self.scene = QGraphicsScene()
+        self.scene.setItemIndexMethod(1)
 
-        view = QGraphicsView(scene, self.tab_network_map)
-        view.resize(866, 522)
-        scene.setSceneRect(0, 0, 766, 422)
+        self.view = QGraphicsView(self.scene, self.tab_network_map)
+        self.view.resize(866, 522)
+        self.scene.setSceneRect(0, 0, 766, 422)
 
+    def update_network_map(self):
+
+        x = random.randrange(50, 800)
+        y = random.randrange(50, 500)
         greenBrush = QBrush(Qt.green)
         blackPen = QPen(Qt.black)
         blackPen.setWidth(2)
 
-        figure = scene.addRect(-30, -30, 60, 60, blackPen, greenBrush)
+        figure = self.scene.addRect(-30, -30, 60, 60, blackPen, greenBrush)
         figure.setPos(x, y)
         figure.setFlag(QGraphicsRectItem.ItemIsMovable)
-
-        pixmap = scene.addPixmap(QPixmap('images/icon_plus.png'))
 
     def off_all_btn(self):
         # Отключение кнопок при отсуствии подключения к модулю
