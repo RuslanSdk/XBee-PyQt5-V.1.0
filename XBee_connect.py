@@ -9,6 +9,14 @@ import time
 from digi.xbee.util.utils import hex_to_string
 
 
+module_type_dict = {'21': 'S2B ZigBee Coordinator API',
+                    '23': 'S2B ZigBee Router API',
+                    '26': 'S2B ZigBee Router/End Device, Analog I/O Adapter',
+                    '27': 'S2B ZigBee Router/End Device, Digital I/O Adapter',
+                    '29': 'S2B ZigBee End Device API',
+                    '40': 'S2C Firmware'}
+
+
 class XBeeConnect(QObject):
 
     successful_connection_signal = pyqtSignal()
@@ -30,7 +38,6 @@ class XBeeConnect(QObject):
         self.parent.signal_read_info.connect(self.read_info)
         self.parent.signal_write_info.connect(self.write_info)
         self.parent.signal_disconnect_module.connect(self.close_port)
-        self.parent.signal_info_type_s2c_dev.connect(self.info_type_s2c_dev)
         self.parent.signal_update_info_id.connect(self.update_info_id)
         self.parent.signal_apply_change_id.connect(self.apply_change_id)
         self.parent.signal_update_info_ni.connect(self.update_info_ni)
@@ -148,12 +155,6 @@ class XBeeConnect(QObject):
 
         print("Discovering remote XBee devices...")
 
-    def info_type_s2c_dev(self, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.coordinator_enabled = module.get_parameter('CE')
-        module.sleep_mode = module.get_parameter('SM')
-
     def update_info_id(self, module_id):
 
         module = self.get_module_by_id(module_id)
@@ -220,7 +221,6 @@ class XBeeConnect(QObject):
 class TableModel(QAbstractTableModel):
 
     def __init__(self, parent=None):
-
         super(TableModel, self).__init__(parent)
         self.columnNames = ['Тип устройства', 'Идентификатор узла', 'MAC-адрес', 'COM-порт']
         self.modules = dict()
@@ -245,7 +245,21 @@ class TableModel(QAbstractTableModel):
             if index.column() == 0:
                 device_type = module.type_device
                 print(device_type)
-                return "{}".format(device_type)
+                if device_type[0:2] == '21':
+                    return "{}".format(module_type_dict.get('21'))
+                if device_type[0:2] == '23':
+                    return "{}".format(module_type_dict.get('23'))
+                if device_type[0:2] == '29':
+                    return "{}".format(module_type_dict.get('29'))
+                elif device_type[0:2] == '40':
+                    coord_en = module.get_parameter('CE')
+                    sleep_mod = module.get_parameter('SM')
+                    if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
+                        return "{}".format(module_type_dict.get('40') + ': ' + 'Coordinator')
+                    elif (str(hex_to_string(coord_en))) == '00' and (str(hex_to_string(sleep_mod))) == '00':
+                        return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
+                    else:
+                        return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
             if index.column() == 1:
                 node_id = module.node_id
                 print(node_id)

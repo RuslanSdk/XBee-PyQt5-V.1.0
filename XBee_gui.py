@@ -13,13 +13,6 @@ from digi.xbee.util.utils import hex_to_string
 import time
 import random
 
-module_type_dict = {'21': 'S2B ZigBee Coordinator API',
-                    '23': 'S2B ZigBee Router API',
-                    '26': 'S2B ZigBee Router/End Device, Analog I/O Adapter',
-                    '27': 'S2B ZigBee Router/End Device, Digital I/O Adapter',
-                    '29': 'S2B ZigBee End Device API',
-                    '40': 'S2C Common Firmware'}
-
 
 class MainWindow(QMainWindow):
 
@@ -27,7 +20,6 @@ class MainWindow(QMainWindow):
     signal_read_info = pyqtSignal(int)
     signal_write_info = pyqtSignal(int, tuple)
     signal_disconnect_module = pyqtSignal(int)
-    signal_info_type_s2c_dev = pyqtSignal()
     signal_update_info_id = pyqtSignal(int)
     signal_apply_change_id = pyqtSignal(int, str)
     signal_update_info_ni = pyqtSignal(int)
@@ -199,10 +191,6 @@ class MainWindow(QMainWindow):
         self.write_btn.setDisabled(False)
         self.disconnect_module_btn.setDisabled(False)
         self.on_all_btn()
-
-    def type_firmware_devices(self):
-        # Определение типа устройства и прошивки
-        pass
 
     def error_connect(self):
 
