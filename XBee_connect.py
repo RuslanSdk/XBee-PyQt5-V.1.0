@@ -27,6 +27,7 @@ class XBeeConnect(QObject):
 
         self.parent.signal_start_connect.connect(self.start_connection)
         self.parent.signal_read_info.connect(self.read_info)
+        self.parent.signal_write_info.connect(self.write_info)
         self.parent.signal_disconnect_module.connect(self.close_port)
         self.parent.signal_info_type_s2c_dev.connect(self.info_type_s2c_dev)
         self.parent.signal_update_info_id.connect(self.update_info_id)
@@ -39,6 +40,9 @@ class XBeeConnect(QObject):
         self.parent.signal_apply_change_jv.connect(self.apply_change_jv)
         self.parent.signal_update_info_sm.connect(self.update_info_sm)
         self.parent.signal_apply_change_sm.connect(self.apply_change_sm)
+        self.parent.signal_coordinator_enable.connect(self.coord_en)
+        self.parent.signal_router_enable.connect(self.router_en)
+        self.parent.signal_end_dev_enable.connect(self.end_dev_en)
 
     @pyqtSlot()
     def start_connection(self):
@@ -98,6 +102,17 @@ class XBeeConnect(QObject):
         self.node_id_current = module.get_node_id()
         print(self.node_id_current)
 
+    def write_info(self, module_id, parameters):
+
+        module = self.get_module_by_id(module_id)
+        module.set_pan_id(hex_string_to_bytes(str(parameters[0])))
+        module.set_parameter('NI', bytearray(str(parameters[1]), 'utf8'))
+        module.apply_changes()
+        module.write_changes()
+        self.new_pan_id = module.get_parameter('ID')
+        self.new_node_id = module.get_node_id()
+        print('DLY TESTA OK NORM')
+
     def close_port(self, module_id):
 
         module = self.get_module_by_id(module_id)
@@ -116,28 +131,28 @@ class XBeeConnect(QObject):
     def update_info_id(self, module_id):
 
         module = self.get_module_by_id(module_id)
-        module.info_id = module.get_parameter('ID')
+        self.info_id = module.get_parameter('ID')
 
-    def apply_change_id(self, pan_id, module_id):
+    def apply_change_id(self, module_id, id):
 
         module = self.get_module_by_id(module_id)
-        module.set_pan_id(hex_string_to_bytes(str(pan_id)))
+        module.set_pan_id(hex_string_to_bytes(str(id)))
         module.apply_changes()
         module.write_changes()
-        module.new_id = module.get_parameter('ID')
+        self.new_id = module.get_parameter('ID')
 
     def update_info_ni(self, module_id):
 
         module = self.get_module_by_id(module_id)
-        module.info_ni = module.get_node_id()
+        self.info_ni = module.get_node_id()
 
-    def apply_change_ni(self, ni, module_id):
+    def apply_change_ni(self, module_id, ni):
 
         module = self.get_module_by_id(module_id)
         module.set_parameter('NI', bytearray(str(ni), 'utf8'))
         module.apply_changes()
         module.write_changes()
-        module.new_ni = module.get_node_id()
+        self.new_ni = module.get_node_id()
 
     def update_info_ce(self, module_id):
 
@@ -177,6 +192,42 @@ class XBeeConnect(QObject):
         module.apply_changes()
         module.write_changes()
         module.new_sm = module.get_parameter('SM')
+
+    def coord_en(self, module_id):
+
+        ce = '1'
+        sm = '0'
+        jv = '0'
+        module = self.get_module_by_id(module_id)
+        module.set_parameter('SM', hex_string_to_bytes(str(sm)))
+        module.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        module.set_parameter('JV', hex_string_to_bytes(str(jv)))
+        module.apply_changes()
+        module.write_changes()
+
+    def router_en(self, module_id):
+
+        ce = '0'
+        sm = '0'
+        jv = '1'
+        module = self.get_module_by_id(module_id)
+        module.set_parameter('SM', hex_string_to_bytes(str(sm)))
+        module.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        module.set_parameter('JV', hex_string_to_bytes(str(jv)))
+        module.apply_changes()
+        module.write_changes()
+
+    def end_dev_en(self, module_id):
+
+        ce = '0'
+        sm = '4'
+        jv = '0'
+        module = self.get_module_by_id(module_id)
+        module.set_parameter('CE', hex_string_to_bytes(str(ce)))
+        module.set_parameter('JV', hex_string_to_bytes(str(jv)))
+        module.set_parameter('SM', hex_string_to_bytes(str(sm)))
+        module.apply_changes()
+        module.write_changes()
 
 
 class TableModel(QAbstractTableModel):
