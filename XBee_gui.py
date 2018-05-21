@@ -5,9 +5,9 @@ import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QDialog, QGridLayout,
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
                              QMessageBox, QTableView, QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsItem,
-                             QGraphicsPixmapItem)
+                             QGraphicsPixmapItem, QGraphicsTextItem)
 from PyQt5.QtGui import (QIcon, QPixmap, QBrush, QPen)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF)
 from XBee_connect import XBeeConnect, TableModel
 from digi.xbee.util.utils import hex_to_string
 import time
@@ -30,6 +30,10 @@ class MainWindow(QMainWindow):
 
     signal_search_devices = pyqtSignal(int)
 
+    signal_test_remote = pyqtSignal(int)
+
+    signal_update = pyqtSignal(int, str, str)
+
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
@@ -39,6 +43,7 @@ class MainWindow(QMainWindow):
         self.connection_thread.start()
         self.xbee_connect.successful_connection_signal.connect(self.success_connect)
         self.xbee_connect.error_connection_signal.connect(self.error_connect)
+        self.xbee_connect.signal_updated.connect(self.updated_param)
         self.init_ui()
 
     def start_connect_to_module_clicked(self):
@@ -106,13 +111,32 @@ class MainWindow(QMainWindow):
 
     def update_info_id_clicked(self):
 
-        try:
-            index = self.table.selectedIndexes()[0].row()
-            self.signal_update_info_id.emit(index)
-            self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.info_id)))
-        except Exception as e:
+        command = 'ID'
+        self.current_field = self.pan_id_edit
+        print('command id no send')
+        self.update_clicked(command)
+
+
+    def write_info_id_clicked(self):
+
+        command = 'ID'
+        self.current_field = self.pan_id_edit
+        parameter = self.pan_id_edit.text()
+        self.update_clicked(command, parameter)
+
+    def update_clicked(self, comm, parameter=""):
+
+        index = self.table.selectedIndexes()[0].row()
+        print(index)
+        if index is None:
             QMessageBox.warning(self, 'Ошибка', 'Не выбран модуль из таблицы!!!')
-            print(e)
+        else:
+            self.signal_update.emit(index, comm, parameter)
+            print('signal update send')
+
+    def updated_param(self, result):
+        self.current_field.setText(str(result))
+
 
     def apply_change_id_clicked(self):
 
@@ -128,16 +152,9 @@ class MainWindow(QMainWindow):
 
     def update_info_ni_clicked(self):
 
-        try:
-            index = self.table.selectedIndexes()[0].row()
-
-            self.signal_update_info_ni.emit(index)
-            if len(str(self.xbee_connect.info_ni)) == 1:
-                QMessageBox.warning(self, 'Oooops!', 'Индентификатор узла не указан')
-            self.node_id_edit.setText(str(self.xbee_connect.info_ni))
-        except Exception as e:
-            QMessageBox.warning(self, 'Ошибка', 'Не выбран модуль из таблицы!!!')
-            print(e)
+        command = 'NI'
+        self.current_field = self.node_id_edit
+        self.update_clicked(command)
 
     def apply_change_ni_clicked(self):
 
@@ -233,10 +250,21 @@ class MainWindow(QMainWindow):
         self.toolbar = self.addToolBar('Меню')
         start_connect = QAction(QIcon('images/icon_plus.png'), 'Добавить XBee модуль', self)
         search_devices = QAction(QIcon('images/search_dev_icon'), 'Поиск устройств', self)
+        test_btn = QAction('TEST', self)
         start_connect.triggered.connect(self.init_connect_dialog)
+        #search_devices.triggered.connect(self.update_network_map)
         search_devices.triggered.connect(self.search_devices_clicked)
+        test_btn.triggered.connect(self.test_remote_device)
         self.toolbar.addAction(start_connect)
         self.toolbar.addAction(search_devices)
+        self.toolbar.addAction(test_btn)
+
+    def test_remote_device(self):
+
+        index = self.table.selectedIndexes()[0].row()
+        self.signal_test_remote.emit(index)
+
+
 
     def init_connect_dialog(self):
         # Модальное окно подключения
@@ -366,7 +394,7 @@ class MainWindow(QMainWindow):
         self.write_btn.clicked.connect(self.write_info_clicked)
         self.disconnect_module_btn.clicked.connect(self.disconnect_module_clicked)
         self.update_info_id_btn.clicked.connect(self.update_info_id_clicked)
-        self.apply_change_id_btn.clicked.connect(self.apply_change_id_clicked)
+        self.apply_change_id_btn.clicked.connect(self.write_info_id_clicked)
         self.update_info_ni_btn.clicked.connect(self.update_info_ni_clicked)
         self.apply_change_ni_btn.clicked.connect(self.apply_change_ni_clicked)
         self.coordinator_enable_btn.clicked.connect(self.coordinator_enable_clicked)
@@ -386,19 +414,15 @@ class MainWindow(QMainWindow):
 
         self.view = QGraphicsView(self.scene, self.tab_network_map)
         self.view.resize(866, 522)
-        self.scene.setSceneRect(0, 0, 766, 422)
+        self.scene.setSceneRect(QRectF())
 
     def update_network_map(self):
 
         x = random.randrange(50, 800)
         y = random.randrange(50, 500)
-        greenBrush = QBrush(Qt.green)
-        blackPen = QPen(Qt.black)
-        blackPen.setWidth(2)
 
-        figure = self.scene.addRect(-30, -30, 60, 60, blackPen, greenBrush)
-        figure.setPos(x, y)
-        figure.setFlag(QGraphicsRectItem.ItemIsMovable)
+        mac_item = QGraphicsTextItem()
+        pixmap_item = QGraphicsPixmapItem()
 
     def off_all_btn(self):
         # Отключение кнопок при отсуствии подключения к модулю

@@ -21,6 +21,7 @@ class XBeeConnect(QObject):
 
     successful_connection_signal = pyqtSignal()
     error_connection_signal = pyqtSignal()
+    signal_updated = pyqtSignal(str)
 
     def __init__(self, parent=None):
 
@@ -48,6 +49,10 @@ class XBeeConnect(QObject):
 
         self.parent.signal_search_devices.connect(self.search_devices)
 
+        self.parent.signal_test_remote.connect(self.test_remote)
+
+        self.parent.signal_update.connect(self.on_signal_update)
+
     @pyqtSlot()
     def start_connection(self):
 
@@ -66,6 +71,7 @@ class XBeeConnect(QObject):
             local_device.mac = str(local_device.get_64bit_addr())
             local_device.node_id = str(local_device.get_node_id())
             local_device.com = self.com
+            local_device.remote = False
 
             self.model.modules[local_device.mac] = {"id": self.model.module_id, "module": local_device}
             self.successful_connection_signal.emit()
@@ -131,29 +137,55 @@ class XBeeConnect(QObject):
 
         xbee_network = module.get_network()
 
-        xbee_network.set_discovery_timeout(5)  # 5 seconds.
+        xbee_network.set_discovery_timeout(10)  # 5 seconds.
 
         xbee_network.clear()
 
-        # Callback for discovered devices.
-        def callback_device_discovered(remote):
-            print("Device discovered: %s" % remote)
-            print(remote.get_64bit_addr())
+        xbee_network.add_device_discovered_callback(self.callback_device_discovered)
 
-        # Callback for discovery finished.
-        def callback_discovery_finished(status):
-            if status == NetworkDiscoveryStatus.SUCCESS:
-                print("Discovery process finished successfully.")
-            else:
-                print("There was an error discovering devices: %s" % status.description)
-
-        xbee_network.add_device_discovered_callback(callback_device_discovered)
-
-        xbee_network.add_discovery_process_finished_callback(callback_discovery_finished)
+        xbee_network.add_discovery_process_finished_callback(self.callback_discovery_finished)
 
         xbee_network.start_discovery_process()
 
         print("Discovering remote XBee devices...")
+
+        # Callback for discovered devices.
+    def callback_device_discovered(self, remote):
+        print("Device discovered: %s" % remote)
+        remote.mac = str(remote.get_64bit_addr())
+        remote.node_id = str(remote.get_node_id())
+        remote.remote = True
+        remote.type_device = None
+        self.model.modules[remote.mac] = {"id": self.model.module_id, "module": remote}
+        self.update_table()
+
+    # Callback for discovery finished.
+    def callback_discovery_finished(self, status):
+        if status == NetworkDiscoveryStatus.SUCCESS:
+            print("Discovery process finished successfully.")
+        else:
+            print("There was an error discovering devices: %s" % status.description)
+
+    def test_remote(self, module_id):
+        remote = self.get_module_by_id(module_id)
+        test_command = remote.get_node_id()
+        print(str(test_command))
+
+    def on_signal_update(self, module_id, command, parameter):
+        module = self.get_module_by_id(module_id)
+        if not parameter:
+            if command == 'ID':
+                result = hex_to_string(module.get_parameter(str(command)))
+                print('КОМАНДА ОТПРАВЛЕНА')
+        else:
+            if command == 'ID':
+                module.set_pan_id(hex_string_to_bytes(str(parameter)))
+                module.apply_changes()
+                module.write_changes()
+                print('ДАННЫЕ ИЗМЕНЕНЫ')
+                result = hex_to_string(module.get_parameter(str(command)))
+        self.signal_updated.emit(str(result))
+
 
     def update_info_id(self, module_id):
 
@@ -171,7 +203,7 @@ class XBeeConnect(QObject):
     def update_info_ni(self, module_id):
 
         module = self.get_module_by_id(module_id)
-        self.info_ni = module.get_node_id()
+        module.info_ni = module.get_node_id()
 
     def apply_change_ni(self, module_id, ni):
 
@@ -235,7 +267,6 @@ class TableModel(QAbstractTableModel):
         return len(self.columnNames)
 
     def data(self, index, role=Qt.DisplayRole):
-
         if not index.isValid():
             print('not valid')
             return None
@@ -243,8 +274,12 @@ class TableModel(QAbstractTableModel):
             module_address = self.get_address_by_id(index.row())
             module = self.modules[module_address]["module"]
             if index.column() == 0:
-                device_type = module.type_device
-                print(device_type)
+
+                if not module.type_device:
+
+                    return "Обновите данные"
+                else:
+                    device_type = module.type_device
                 if device_type[0:2] == '21':
                     return "{}".format(module_type_dict.get('21'))
                 if device_type[0:2] == '23':
@@ -262,12 +297,14 @@ class TableModel(QAbstractTableModel):
                         return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
             if index.column() == 1:
                 node_id = module.node_id
-                print(node_id)
                 return "{}".format(node_id)
             if index.column() == 2:
                 return str(module_address)
             if index.column() == 3:
-                return str(module.com)
+                if module.remote:
+                    return "Remote"
+                else:
+                    return str(module.com)
 
     def insertRows(self, pos=0, count=1, parent=None):
 
