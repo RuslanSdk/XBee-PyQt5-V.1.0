@@ -20,19 +20,13 @@ class MainWindow(QMainWindow):
     signal_read_info = pyqtSignal(int)
     signal_write_info = pyqtSignal(int, tuple)
     signal_disconnect_module = pyqtSignal(int)
-    signal_update_info_id = pyqtSignal(int)
-    signal_apply_change_id = pyqtSignal(int, str)
-    signal_update_info_ni = pyqtSignal(int)
-    signal_apply_change_ni = pyqtSignal(int, str)
     signal_coordinator_enable = pyqtSignal(int)
     signal_router_enable = pyqtSignal(int)
     signal_end_dev_enable = pyqtSignal(int)
-
     signal_search_devices = pyqtSignal(int)
+    signal_update = pyqtSignal(int, str, str)
 
     signal_test_remote = pyqtSignal(int)
-
-    signal_update = pyqtSignal(int, str, str)
 
     def __init__(self, parent=None):
 
@@ -116,7 +110,6 @@ class MainWindow(QMainWindow):
         print('command id no send')
         self.update_clicked(command)
 
-
     def write_info_id_clicked(self):
 
         command = 'ID'
@@ -137,36 +130,19 @@ class MainWindow(QMainWindow):
     def updated_param(self, result):
         self.current_field.setText(str(result))
 
-
-    def apply_change_id_clicked(self):
-
-        try:
-            index = self.table.selectedIndexes()[0].row()
-
-            param_pan_id = self.pan_id_edit.text()
-            self.signal_apply_change_id.emit(index, param_pan_id)
-            self.pan_id_edit.setText(str(hex_to_string(self.xbee_connect.new_id)))
-        except Exception as e:
-            QMessageBox.warning(self, 'Ошибка', 'Не выбран модуль из таблицы!!!')
-            print(e)
-
     def update_info_ni_clicked(self):
 
         command = 'NI'
         self.current_field = self.node_id_edit
+        print('command id no send')
         self.update_clicked(command)
 
-    def apply_change_ni_clicked(self):
+    def write_info_ni_clicked(self):
 
-        try:
-            index = self.table.selectedIndexes()[0].row()
-
-            param_node_id = self.node_id_edit.text()
-            self.signal_apply_change_ni.emit(index, param_node_id)
-            self.node_id_edit.setText(str(self.xbee_connect.new_ni))
-        except Exception as e:
-            QMessageBox.warning(self, 'Ошибка', 'Не выбран модуль из таблицы!!!')
-            print(e)
+        command = 'NI'
+        self.current_field = self.node_id_edit
+        parameter = self.node_id_edit.text()
+        self.update_clicked(command, parameter)
 
     def coordinator_enable_clicked(self):
 
@@ -199,7 +175,6 @@ class MainWindow(QMainWindow):
 
         index = self.table.selectedIndexes()[0].row()
         self.signal_search_devices.emit(index)
-
 
     def success_connect(self):
 
@@ -263,8 +238,6 @@ class MainWindow(QMainWindow):
 
         index = self.table.selectedIndexes()[0].row()
         self.signal_test_remote.emit(index)
-
-
 
     def init_connect_dialog(self):
         # Модальное окно подключения
@@ -396,7 +369,7 @@ class MainWindow(QMainWindow):
         self.update_info_id_btn.clicked.connect(self.update_info_id_clicked)
         self.apply_change_id_btn.clicked.connect(self.write_info_id_clicked)
         self.update_info_ni_btn.clicked.connect(self.update_info_ni_clicked)
-        self.apply_change_ni_btn.clicked.connect(self.apply_change_ni_clicked)
+        self.apply_change_ni_btn.clicked.connect(self.write_info_ni_clicked)
         self.coordinator_enable_btn.clicked.connect(self.coordinator_enable_clicked)
         self.router_enable_btn.clicked.connect(self.router_enable_clicked)
         self.end_device_enable_btn.clicked.connect(self.end_dev_enable_clicked)

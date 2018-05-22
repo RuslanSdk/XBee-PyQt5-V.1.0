@@ -39,19 +39,13 @@ class XBeeConnect(QObject):
         self.parent.signal_read_info.connect(self.read_info)
         self.parent.signal_write_info.connect(self.write_info)
         self.parent.signal_disconnect_module.connect(self.close_port)
-        self.parent.signal_update_info_id.connect(self.update_info_id)
-        self.parent.signal_apply_change_id.connect(self.apply_change_id)
-        self.parent.signal_update_info_ni.connect(self.update_info_ni)
-        self.parent.signal_apply_change_ni.connect(self.apply_change_ni)
         self.parent.signal_coordinator_enable.connect(self.coord_en)
         self.parent.signal_router_enable.connect(self.router_en)
         self.parent.signal_end_dev_enable.connect(self.end_dev_en)
-
         self.parent.signal_search_devices.connect(self.search_devices)
+        self.parent.signal_update.connect(self.on_signal_update)
 
         self.parent.signal_test_remote.connect(self.test_remote)
-
-        self.parent.signal_update.connect(self.on_signal_update)
 
     @pyqtSlot()
     def start_connection(self):
@@ -177,6 +171,8 @@ class XBeeConnect(QObject):
             if command == 'ID':
                 result = hex_to_string(module.get_parameter(str(command)))
                 print('КОМАНДА ОТПРАВЛЕНА')
+            if command == 'NI':
+                result = module.get_node_id()
         else:
             if command == 'ID':
                 module.set_pan_id(hex_string_to_bytes(str(parameter)))
@@ -184,34 +180,12 @@ class XBeeConnect(QObject):
                 module.write_changes()
                 print('ДАННЫЕ ИЗМЕНЕНЫ')
                 result = hex_to_string(module.get_parameter(str(command)))
+            if command == 'NI':
+                module.set_parameter(str(command), bytearray(str(parameter), 'utf8'))
+                module.apply_changes()
+                module.write_changes()
+                result = module.get_node_id()
         self.signal_updated.emit(str(result))
-
-
-    def update_info_id(self, module_id):
-
-        module = self.get_module_by_id(module_id)
-        self.info_id = module.get_parameter('ID')
-
-    def apply_change_id(self, module_id, id):
-
-        module = self.get_module_by_id(module_id)
-        module.set_pan_id(hex_string_to_bytes(str(id)))
-        module.apply_changes()
-        module.write_changes()
-        self.new_id = module.get_parameter('ID')
-
-    def update_info_ni(self, module_id):
-
-        module = self.get_module_by_id(module_id)
-        module.info_ni = module.get_node_id()
-
-    def apply_change_ni(self, module_id, ni):
-
-        module = self.get_module_by_id(module_id)
-        module.set_parameter('NI', bytearray(str(ni), 'utf8'))
-        module.apply_changes()
-        module.write_changes()
-        self.new_ni = module.get_node_id()
 
     def coord_en(self, module_id):
 
