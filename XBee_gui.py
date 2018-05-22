@@ -183,6 +183,7 @@ class MainWindow(QMainWindow):
         self.write_btn.setDisabled(False)
         self.disconnect_module_btn.setDisabled(False)
         self.on_all_btn()
+        self.search_devices.setDisabled(False)
 
     def error_connect(self):
 
@@ -224,14 +225,15 @@ class MainWindow(QMainWindow):
 
         self.toolbar = self.addToolBar('Меню')
         start_connect = QAction(QIcon('images/icon_plus.png'), 'Добавить XBee модуль', self)
-        search_devices = QAction(QIcon('images/search_dev_icon'), 'Поиск устройств', self)
+        self.search_devices = QAction(QIcon('images/search_dev_icon'), 'Поиск устройств', self)
+        self.search_devices.setDisabled(True)
         test_btn = QAction('TEST', self)
         start_connect.triggered.connect(self.init_connect_dialog)
         #search_devices.triggered.connect(self.update_network_map)
-        search_devices.triggered.connect(self.search_devices_clicked)
+        self.search_devices.triggered.connect(self.search_devices_clicked)
         test_btn.triggered.connect(self.test_remote_device)
         self.toolbar.addAction(start_connect)
-        self.toolbar.addAction(search_devices)
+        self.toolbar.addAction(self.search_devices)
         self.toolbar.addAction(test_btn)
 
     def test_remote_device(self):

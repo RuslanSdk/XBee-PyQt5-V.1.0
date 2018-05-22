@@ -2,6 +2,7 @@
 # Функции организации подкючения и передачи команд
 
 from PyQt5.QtCore import (QObject, pyqtSlot, pyqtSignal, QAbstractTableModel, QModelIndex, Qt)
+from PyQt5.QtWidgets import QMessageBox
 from digi.xbee.devices import (XBeeDevice, RemoteXBeeDevice, XBee64BitAddress)
 from digi.xbee.models.status import NetworkDiscoveryStatus
 from digi.xbee.util.utils import hex_string_to_bytes
@@ -58,7 +59,7 @@ class XBeeConnect(QObject):
             # делаем для теста print
             print('ПОРТ ОТКРЫТ. Устройство готово к работе')
 
-            local_device.type_device = hex_to_string(local_device.get_firmware_version())
+            local_device.type_device = hex_to_string(local_device.get_parameter('VR'))
 
             print("Firmware version: %s" % local_device.type_device)
 
@@ -129,19 +130,22 @@ class XBeeConnect(QObject):
 
         module = self.get_module_by_id(module_id)
 
-        xbee_network = module.get_network()
-
-        xbee_network.set_discovery_timeout(10)  # 5 seconds.
-
-        xbee_network.clear()
-
-        xbee_network.add_device_discovered_callback(self.callback_device_discovered)
-
-        xbee_network.add_discovery_process_finished_callback(self.callback_discovery_finished)
-
-        xbee_network.start_discovery_process()
-
-        print("Discovering remote XBee devices...")
+        dev_type = module.type_device
+        if dev_type[0:2] == '40':
+            coord_en = module.get_parameter('CE')
+            print(str(hex_to_string(coord_en)))
+            sleep_mod = module.get_parameter('SM')
+            print(str(hex_to_string(sleep_mod)))
+            if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
+                xbee_network = module.get_network()
+                xbee_network.set_discovery_timeout(10)  # sec
+                xbee_network.clear()
+                xbee_network.add_device_discovered_callback(self.callback_device_discovered)
+                xbee_network.add_discovery_process_finished_callback(self.callback_discovery_finished)
+                xbee_network.start_discovery_process()
+                print("Discovering remote XBee devices...")
+        else:
+            QMessageBox.warning(self, 'Внимание', 'Выберите Координатор!')
 
         # Callback for discovered devices.
     def callback_device_discovered(self, remote):
@@ -164,6 +168,8 @@ class XBeeConnect(QObject):
         remote = self.get_module_by_id(module_id)
         test_command = remote.get_node_id()
         print(str(test_command))
+        test_info_vr = hex_to_string(remote.get_parameter('VR'))
+        print(str(test_info_vr))
 
     def on_signal_update(self, module_id, command, parameter):
         module = self.get_module_by_id(module_id)
@@ -249,9 +255,23 @@ class TableModel(QAbstractTableModel):
             module = self.modules[module_address]["module"]
             if index.column() == 0:
 
-                if not module.type_device:
-
-                    return "Обновите данные"
+                if module.remote:
+                    device_type = hex_to_string(module.get_parameter('VR'))
+                    if device_type[0:2] == '21':
+                        return "{}".format(module_type_dict.get('21'))
+                    if device_type[0:2] == '23':
+                        return "{}".format(module_type_dict.get('23'))
+                    if device_type[0:2] == '29':
+                        return "{}".format(module_type_dict.get('29'))
+                    elif device_type[0:2] == '40':
+                        coord_en = module.get_parameter('CE')
+                        sleep_mod = module.get_parameter('SM')
+                        if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
+                            return "{}".format(module_type_dict.get('40') + ': ' + 'Coordinator')
+                        elif (str(hex_to_string(coord_en))) == '00' and (str(hex_to_string(sleep_mod))) == '00':
+                            return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
+                        else:
+                            return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
                 else:
                     device_type = module.type_device
                 if device_type[0:2] == '21':
