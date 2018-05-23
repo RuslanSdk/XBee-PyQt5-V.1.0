@@ -38,6 +38,9 @@ class MainWindow(QMainWindow):
         self.xbee_connect.successful_connection_signal.connect(self.success_connect)
         self.xbee_connect.error_connection_signal.connect(self.error_connect)
         self.xbee_connect.signal_updated.connect(self.updated_param)
+
+        self.xbee_connect.signal_discovered_finished.connect(self.update_network_map)
+
         self.init_ui()
 
     def start_connect_to_module_clicked(self):
@@ -391,6 +394,7 @@ class MainWindow(QMainWindow):
         self.view.resize(866, 522)
         self.scene.setSceneRect(QRectF())
 
+
     def update_network_map(self):
 
         x = random.randrange(50, 800)
@@ -398,6 +402,13 @@ class MainWindow(QMainWindow):
 
         mac_item = QGraphicsTextItem()
         pixmap_item = QGraphicsPixmapItem()
+
+        for k, v in self.model.modules.items():
+            print(v["module"].get_parameter("ID"))
+
+    def read_info_for_scene(self, address):
+        print('тестттттттттт')
+        print(address)
 
     def off_all_btn(self):
         # Отключение кнопок при отсуствии подключения к модулю

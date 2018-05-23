@@ -24,6 +24,8 @@ class XBeeConnect(QObject):
     error_connection_signal = pyqtSignal()
     signal_updated = pyqtSignal(str)
 
+    signal_discovered_finished = pyqtSignal()
+
     def __init__(self, parent=None):
 
         super(XBeeConnect, self).__init__(parent)
@@ -67,6 +69,7 @@ class XBeeConnect(QObject):
             local_device.node_id = str(local_device.get_node_id())
             local_device.com = self.com
             local_device.remote = False
+            local_device.firmware = ""
 
             self.model.modules[local_device.mac] = {"id": self.model.module_id, "module": local_device}
             self.successful_connection_signal.emit()
@@ -90,7 +93,7 @@ class XBeeConnect(QObject):
             self.model.module_id += 1
         else:
             topLeft = self.model.createIndex(0, 0)
-            bottomRight = self.model.createIndex(0, 3)
+            bottomRight = self.model.createIndex(len(self.model.modules) - 1, 3)
             self.model.module_id -= 1
 
         self.model.dataChanged.emit(topLeft, bottomRight)
@@ -129,23 +132,13 @@ class XBeeConnect(QObject):
     def search_devices(self, module_id):
 
         module = self.get_module_by_id(module_id)
-
-        dev_type = module.type_device
-        if dev_type[0:2] == '40':
-            coord_en = module.get_parameter('CE')
-            print(str(hex_to_string(coord_en)))
-            sleep_mod = module.get_parameter('SM')
-            print(str(hex_to_string(sleep_mod)))
-            if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
-                xbee_network = module.get_network()
-                xbee_network.set_discovery_timeout(10)  # sec
-                xbee_network.clear()
-                xbee_network.add_device_discovered_callback(self.callback_device_discovered)
-                xbee_network.add_discovery_process_finished_callback(self.callback_discovery_finished)
-                xbee_network.start_discovery_process()
-                print("Discovering remote XBee devices...")
-        else:
-            QMessageBox.warning(self, 'Внимание', 'Выберите Координатор!')
+        xbee_network = module.get_network()
+        xbee_network.set_discovery_timeout(10)  # sec
+        xbee_network.clear()
+        xbee_network.add_device_discovered_callback(self.callback_device_discovered)
+        xbee_network.add_discovery_process_finished_callback(self.callback_discovery_finished)
+        xbee_network.start_discovery_process()
+        print("Discovering remote XBee devices...")
 
         # Callback for discovered devices.
     def callback_device_discovered(self, remote):
@@ -154,6 +147,7 @@ class XBeeConnect(QObject):
         remote.node_id = str(remote.get_node_id())
         remote.remote = True
         remote.type_device = None
+        remote.firmware = ""
         self.model.modules[remote.mac] = {"id": self.model.module_id, "module": remote}
         self.update_table()
 
@@ -163,6 +157,11 @@ class XBeeConnect(QObject):
             print("Discovery process finished successfully.")
         else:
             print("There was an error discovering devices: %s" % status.description)
+        for k, v in self.model.modules.items():
+            m = v["module"]
+            m.firmware = self.type_devices_info(m.get_parameter("VR"), m)
+        self.update_table(add=False)
+        self.signal_discovered_finished.emit()
 
     def test_remote(self, module_id):
         remote = self.get_module_by_id(module_id)
@@ -229,6 +228,25 @@ class XBeeConnect(QObject):
         module.apply_changes()
         module.write_changes()
 
+    def type_devices_info(self, firmware, module):
+
+        vr = hex_to_string(firmware)
+        if vr[0:2] == '21':
+            return "{}".format(module_type_dict.get('21'))
+        if vr[0:2] == '23':
+            return "{}".format(module_type_dict.get('23'))
+        if vr[0:2] == '29':
+            return "{}".format(module_type_dict.get('29'))
+        elif vr[0:2] == '40':
+            coord_en = module.get_parameter('CE')
+            sleep_mod = module.get_parameter('SM')
+            if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
+                return "{}".format(module_type_dict.get('40') + ': ' + 'Coordinator')
+            elif (str(hex_to_string(coord_en))) == '00' and (str(hex_to_string(sleep_mod))) == '00':
+                return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
+            else:
+                return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
+
 
 class TableModel(QAbstractTableModel):
 
@@ -253,42 +271,12 @@ class TableModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             module_address = self.get_address_by_id(index.row())
             module = self.modules[module_address]["module"]
+            firmware = module.firmware
             if index.column() == 0:
-
-                if module.remote:
-                    device_type = hex_to_string(module.get_parameter('VR'))
-                    if device_type[0:2] == '21':
-                        return "{}".format(module_type_dict.get('21'))
-                    if device_type[0:2] == '23':
-                        return "{}".format(module_type_dict.get('23'))
-                    if device_type[0:2] == '29':
-                        return "{}".format(module_type_dict.get('29'))
-                    elif device_type[0:2] == '40':
-                        coord_en = module.get_parameter('CE')
-                        sleep_mod = module.get_parameter('SM')
-                        if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
-                            return "{}".format(module_type_dict.get('40') + ': ' + 'Coordinator')
-                        elif (str(hex_to_string(coord_en))) == '00' and (str(hex_to_string(sleep_mod))) == '00':
-                            return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
-                        else:
-                            return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
+                if not firmware:
+                    return 'Обновите данные'
                 else:
-                    device_type = module.type_device
-                if device_type[0:2] == '21':
-                    return "{}".format(module_type_dict.get('21'))
-                if device_type[0:2] == '23':
-                    return "{}".format(module_type_dict.get('23'))
-                if device_type[0:2] == '29':
-                    return "{}".format(module_type_dict.get('29'))
-                elif device_type[0:2] == '40':
-                    coord_en = module.get_parameter('CE')
-                    sleep_mod = module.get_parameter('SM')
-                    if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
-                        return "{}".format(module_type_dict.get('40') + ': ' + 'Coordinator')
-                    elif (str(hex_to_string(coord_en))) == '00' and (str(hex_to_string(sleep_mod))) == '00':
-                        return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
-                    else:
-                        return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
+                    return firmware
             if index.column() == 1:
                 node_id = module.node_id
                 return "{}".format(node_id)
@@ -296,7 +284,7 @@ class TableModel(QAbstractTableModel):
                 return str(module_address)
             if index.column() == 3:
                 if module.remote:
-                    return "Remote"
+                    return "Remote module"
                 else:
                     return str(module.com)
 
