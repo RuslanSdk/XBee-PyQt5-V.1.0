@@ -26,6 +26,8 @@ class XBeeConnect(QObject):
 
     signal_discovered_finished = pyqtSignal()
 
+    start_discovered_signal = pyqtSignal()
+
     def __init__(self, parent=None):
 
         super(XBeeConnect, self).__init__(parent)
@@ -138,6 +140,7 @@ class XBeeConnect(QObject):
         xbee_network.add_device_discovered_callback(self.callback_device_discovered)
         xbee_network.add_discovery_process_finished_callback(self.callback_discovery_finished)
         xbee_network.start_discovery_process()
+        self.start_discovered_signal.emit()
         print("Discovering remote XBee devices...")
 
         # Callback for discovered devices.
@@ -310,3 +313,15 @@ class TableModel(QAbstractTableModel):
         for k, v in self.modules.items():
             if v["id"] == id:
                 return k
+
+
+class LVL():
+    """
+    Сопоставление уровней логирования с числами
+    """
+    CRITICAL = 50
+    ERROR = 40
+    WARNING = 30
+    INFO = 20
+    DEBUG = 10
+    NOTSET = 0

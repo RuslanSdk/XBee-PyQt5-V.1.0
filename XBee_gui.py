@@ -5,13 +5,14 @@ import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QDialog, QGridLayout,
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
                              QMessageBox, QTableView, QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsItem,
-                             QGraphicsPixmapItem, QGraphicsTextItem)
+                             QGraphicsPixmapItem, QGraphicsTextItem, QMenu, QTextEdit)
 from PyQt5.QtGui import (QIcon, QPixmap, QBrush, QPen)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF, QEvent)
 from XBee_connect import XBeeConnect, TableModel
 from digi.xbee.util.utils import hex_to_string
 import time
 import random
+import logging
 
 
 class MainWindow(QMainWindow):
@@ -39,6 +40,7 @@ class MainWindow(QMainWindow):
         self.xbee_connect.error_connection_signal.connect(self.error_connect)
         self.xbee_connect.signal_updated.connect(self.updated_param)
 
+        self.xbee_connect.start_discovered_signal.connect(self.on_start_discovery)
         self.xbee_connect.signal_discovered_finished.connect(self.update_network_map)
 
         self.init_ui()
@@ -193,6 +195,11 @@ class MainWindow(QMainWindow):
         self.connection_thread.quit()
         QMessageBox.warning(self, 'Ошибка', 'COM-порт не найден или уже используется')
 
+    def on_start_discovery(self):
+        print("Started")
+        self.log_message('Поиск...')
+        self.search_devices.setDisabled(True)
+
     def init_ui(self):
 
         self.resize(890, 600)
@@ -206,6 +213,7 @@ class MainWindow(QMainWindow):
         self.init_toolbar()
         self.one_tab_settings()
         self.two_tab_network_map()
+        self.init_log(self.main_layout)
         self.show()
 
     def init_table(self, layout):
@@ -223,21 +231,48 @@ class MainWindow(QMainWindow):
             print(e)
         layout.addWidget(self.table)
 
+    def init_log(self, layout):
+        self.log_visible = True
+        self.logger = TextLogger(self)
+        self.logger.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s', "%Y-%m-%d %H:%M:%S"))
+        logging.getLogger().addHandler(self.logger)
+        logging.getLogger().setLevel(logging.DEBUG)
+        layout.addWidget(self.logger.widget)
+
     def init_toolbar(self):
         # Верхняя панель управления
 
         self.toolbar = self.addToolBar('Меню')
         start_connect = QAction(QIcon('images/icon_plus.png'), 'Добавить XBee модуль', self)
         self.search_devices = QAction(QIcon('images/search_dev_icon'), 'Поиск устройств', self)
+        self.hide_log_action = QAction(QIcon('images/hide-log-button-icon.png'), "Скрыть/Показать логи", self)
         self.search_devices.setDisabled(True)
         test_btn = QAction('TEST', self)
         start_connect.triggered.connect(self.init_connect_dialog)
         #search_devices.triggered.connect(self.update_network_map)
         self.search_devices.triggered.connect(self.search_devices_clicked)
         test_btn.triggered.connect(self.test_remote_device)
+        self.hide_log_action.triggered.connect(self.hide_log_button_clicked)
         self.toolbar.addAction(start_connect)
         self.toolbar.addAction(self.search_devices)
         self.toolbar.addAction(test_btn)
+        self.toolbar.addAction(self.hide_log_action)
+
+    def log_message(self, msg):
+        """
+        Везде, где нужно вывести сообщение в лог, вызываем эту функцию
+        """
+        logging.debug(msg)
+
+    def hide_log_button_clicked(self):
+        if self.log_visible:
+            self.log_visible = False
+            self.logger.widget.setVisible(False)
+            self.hide_log_action.setChecked(True)
+        else:
+            self.log_visible = True
+            self.logger.widget.setVisible(True)
+            self.hide_log_action.setChecked(False)
 
     def test_remote_device(self):
 
@@ -390,34 +425,70 @@ class MainWindow(QMainWindow):
         self.scene = QGraphicsScene()
         self.scene.setItemIndexMethod(1)
 
-        self.view = QGraphicsView(self.scene, self.tab_network_map)
+        self.view = NetworkMapView(self.scene, self.tab_network_map)
         self.view.resize(866, 522)
         self.scene.setSceneRect(QRectF())
 
+        self.view.context_menu_pressed.connect(self.on_context_menu_pressed)
+
     def update_network_map(self):
+        # Построение карты сети
 
         x = random.randrange(50, 800)
         y = random.randrange(50, 500)
 
         for k, v in self.model.modules.items():
             type_device = v["module"].firmware
-            print(type_device)
+            print(v["module"].mac)
+            mac_address = v["module"].mac
             pixmap = QGraphicsPixmapItem()
+            #pixmap.setFlag(QGraphicsPixmapItem.ItemIsMovable)
+            mac_address_item = QGraphicsTextItem(mac_address)
             if type_device == "S2C Firmware: Coordinator":
-                pixmap.setPixmap(QPixmap('images/zc.png'))
+                pixmap.setPixmap(QPixmap('images/xbee-coord-icon.png'))
                 pixmap.setPos(x, y)
+                mac_address_item.setPos(x - 18, y + 55)
             if type_device == "S2B ZigBee Router API":
-                pixmap.setPixmap(QPixmap('images/zr.png'))
+                pixmap.setPixmap(QPixmap('images/xbee-router-icon.png'))
                 pixmap.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
             if type_device == "S2B ZigBee End Device API":
-                pixmap.setPixmap(QPixmap('images/ze.png'))
+                pixmap.setPixmap(QPixmap('images/xbee-end-dev-icon.png'))
                 pixmap.setPos(x + 70, y + 80)
             self.scene.addItem(pixmap)
+            self.scene.addItem(mac_address_item)
+
+        self.search_devices.setDisabled(False)
+
+    def on_context_menu_pressed(self):
+        self.init_context_settings_dialog()
+
 
     def read_info_for_scene(self, address):
 
         print('тестттттттттт')
         print(address)
+
+    def init_context_settings_dialog(self):
+        # Модальное окно отправки команд из графической сцены
+
+        self.context_settings = QDialog(self)
+        self.context_settings.resize(200, 130)
+        self.context_settings.setWindowTitle('Управление')
+        context_settings_layout = QGridLayout(self.context_settings)
+        command = QLabel('Команда:')
+        parameter = QLabel('Параметер:')
+        command_edit = QLineEdit()
+        parameter_edit = QLineEdit()
+        send_command_btn = QPushButton('Отправить')
+        cancel_btn = QPushButton('Отмена')
+        context_settings_layout.addWidget(command, 1, 0)
+        context_settings_layout.addWidget(command_edit, 1, 1)
+        context_settings_layout.addWidget(parameter, 2, 0)
+        context_settings_layout.addWidget(parameter_edit, 2, 1)
+        context_settings_layout.addWidget(send_command_btn, 3, 0)
+        context_settings_layout.addWidget(cancel_btn, 3, 1)
+
+        self.context_settings.exec_()
 
     def off_all_btn(self):
         # Отключение кнопок при отсуствии подключения к модулю
@@ -455,16 +526,38 @@ class TableView(QTableView):
 
 
 class NetworkMapView(QGraphicsView):
+    context_menu_pressed = pyqtSignal(QEvent)
+
     def __init__(self, *args, **kwargs):
         super(NetworkMapView, self).__init__(*args, **kwargs)
 
     def contextMenuEvent(self, event):
-        pass
+        menu = QMenu()
+        settings_action = menu.addAction("Настройки")
+        action = menu.exec_(event.globalPos())
+        if action == settings_action:
+            self.context_menu_pressed.emit(event)
 
 
 class NetworkMapScene(QGraphicsScene):
     def __init__(self, *args, **kwargs):
         super(NetworkMapScene, self).__init__(*args, **kwargs)
+
+class TextLogger(logging.Handler):
+    """
+    Handler for logger
+    """
+    def __init__(self, parent):
+        logging.Handler.__init__(self)
+        self.widget = QGroupBox('Логи')
+        layout = QVBoxLayout(self.widget)
+        self.text_widget = QTextEdit()
+        self.text_widget.setReadOnly(True)
+        layout.addWidget(self.text_widget)
+
+    def emit(self, record):
+        msg = self.format(record)
+        self.text_widget.append(msg)
 
 
 if __name__ == '__main__':
