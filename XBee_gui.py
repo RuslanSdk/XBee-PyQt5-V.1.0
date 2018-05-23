@@ -394,19 +394,28 @@ class MainWindow(QMainWindow):
         self.view.resize(866, 522)
         self.scene.setSceneRect(QRectF())
 
-
     def update_network_map(self):
 
         x = random.randrange(50, 800)
         y = random.randrange(50, 500)
 
-        mac_item = QGraphicsTextItem()
-        pixmap_item = QGraphicsPixmapItem()
-
         for k, v in self.model.modules.items():
-            print(v["module"].get_parameter("ID"))
+            type_device = v["module"].firmware
+            print(type_device)
+            pixmap = QGraphicsPixmapItem()
+            if type_device == "S2C Firmware: Coordinator":
+                pixmap.setPixmap(QPixmap('images/zc.png'))
+                pixmap.setPos(x, y)
+            if type_device == "S2B ZigBee Router API":
+                pixmap.setPixmap(QPixmap('images/zr.png'))
+                pixmap.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
+            if type_device == "S2B ZigBee End Device API":
+                pixmap.setPixmap(QPixmap('images/ze.png'))
+                pixmap.setPos(x + 70, y + 80)
+            self.scene.addItem(pixmap)
 
     def read_info_for_scene(self, address):
+
         print('тестттттттттт')
         print(address)
 
