@@ -462,7 +462,6 @@ class MainWindow(QMainWindow):
     def on_context_menu_pressed(self):
         self.init_context_settings_dialog()
 
-
     def read_info_for_scene(self, address):
 
         print('тестттттттттт')
@@ -536,7 +535,7 @@ class NetworkMapView(QGraphicsView):
         settings_action = menu.addAction("Настройки")
         action = menu.exec_(event.globalPos())
         if action == settings_action:
-            self.context_menu_pressed.emit(event)
+            self.context_menu_pressed.emit(event.pos())
 
 
 class NetworkMapScene(QGraphicsScene):
