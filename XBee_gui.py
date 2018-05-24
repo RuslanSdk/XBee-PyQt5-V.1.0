@@ -7,7 +7,7 @@ from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QD
                              QMessageBox, QTableView, QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsItem,
                              QGraphicsPixmapItem, QGraphicsTextItem, QMenu, QTextEdit)
 from PyQt5.QtGui import (QIcon, QPixmap, QBrush, QPen)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF, QEvent)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF, QEvent, QPoint)
 from XBee_connect import XBeeConnect, TableModel
 from digi.xbee.util.utils import hex_to_string
 import time
@@ -214,6 +214,7 @@ class MainWindow(QMainWindow):
         self.one_tab_settings()
         self.two_tab_network_map()
         self.init_log(self.main_layout)
+        self.graphics_scene_items = dict()
         self.show()
 
     def init_table(self, layout):
@@ -439,28 +440,40 @@ class MainWindow(QMainWindow):
 
         for k, v in self.model.modules.items():
             type_device = v["module"].firmware
-            print(v["module"].mac)
-            mac_address = v["module"].mac
+            self.mac_address = v["module"].mac
             pixmap = QGraphicsPixmapItem()
             #pixmap.setFlag(QGraphicsPixmapItem.ItemIsMovable)
-            mac_address_item = QGraphicsTextItem(mac_address)
+            mac_address_item = QGraphicsTextItem(self.mac_address)
+            self.graphics_scene_items[pixmap] = self.mac_address
             if type_device == "S2C Firmware: Coordinator":
                 pixmap.setPixmap(QPixmap('images/xbee-coord-icon.png'))
                 pixmap.setPos(x, y)
-                mac_address_item.setPos(x - 18, y + 55)
+                #mac_address_item.setPos(x - 18, y + 55)
             if type_device == "S2B ZigBee Router API":
                 pixmap.setPixmap(QPixmap('images/xbee-router-icon.png'))
                 pixmap.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
+                #mac_address_item.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
             if type_device == "S2B ZigBee End Device API":
                 pixmap.setPixmap(QPixmap('images/xbee-end-dev-icon.png'))
-                pixmap.setPos(x + 70, y + 80)
+                pixmap.setPos(x + random.randint(-150, 250), y + random.randint(-250, 350))
             self.scene.addItem(pixmap)
-            self.scene.addItem(mac_address_item)
+            #self.scene.addItem(mac_address_item)
 
         self.search_devices.setDisabled(False)
 
-    def on_context_menu_pressed(self):
-        self.init_context_settings_dialog()
+    def on_context_menu_pressed(self, pos):
+
+        #test = self.view.itemAt(pos)
+        try:
+            test = self.graphics_scene_items[self.view.itemAt(pos)]
+            print(test)
+            self.init_context_settings_dialog()
+        except KeyError:
+            QMessageBox.warning(self, 'Внимание', 'Элементов не найдено!')
+
+
+
+
 
     def read_info_for_scene(self, address):
 
@@ -479,15 +492,18 @@ class MainWindow(QMainWindow):
         command_edit = QLineEdit()
         parameter_edit = QLineEdit()
         send_command_btn = QPushButton('Отправить')
-        cancel_btn = QPushButton('Отмена')
+        cancel_context_dialog_btn = QPushButton('Отмена')
         context_settings_layout.addWidget(command, 1, 0)
         context_settings_layout.addWidget(command_edit, 1, 1)
         context_settings_layout.addWidget(parameter, 2, 0)
         context_settings_layout.addWidget(parameter_edit, 2, 1)
         context_settings_layout.addWidget(send_command_btn, 3, 0)
-        context_settings_layout.addWidget(cancel_btn, 3, 1)
-
+        context_settings_layout.addWidget(cancel_context_dialog_btn, 3, 1)
+        cancel_context_dialog_btn.clicked.connect(self.close_context_settings_clicked)
         self.context_settings.exec_()
+
+    def close_context_settings_clicked(self):
+        self.context_settings.close()
 
     def off_all_btn(self):
         # Отключение кнопок при отсуствии подключения к модулю
@@ -525,7 +541,7 @@ class TableView(QTableView):
 
 
 class NetworkMapView(QGraphicsView):
-    context_menu_pressed = pyqtSignal(QEvent)
+    context_menu_pressed = pyqtSignal(QPoint)
 
     def __init__(self, *args, **kwargs):
         super(NetworkMapView, self).__init__(*args, **kwargs)
