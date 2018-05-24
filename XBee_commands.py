@@ -8,7 +8,7 @@
 import json
 import os
 
-with open("CommandDescriptions.json") as jsonFile:
+with open("CommandDescriptions.json", encoding='utf-8') as jsonFile:
     descriptions = json.load(jsonFile)
 
 
@@ -49,9 +49,6 @@ class Command:
             return 'No description'
         else:
             return d
-
-    def send(self):
-        pass
 
 
 class CAddressing:

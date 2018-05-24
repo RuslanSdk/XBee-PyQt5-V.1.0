@@ -5,14 +5,22 @@ import sys
 from PyQt5.QtWidgets import (QMainWindow, QApplication, QPushButton, QAction, QDialog, QGridLayout,
                              QLabel, QLineEdit, QComboBox, QWidget, QVBoxLayout, QTabWidget, QGroupBox, QHBoxLayout,
                              QMessageBox, QTableView, QGraphicsView, QGraphicsScene, QGraphicsRectItem, QGraphicsItem,
-                             QGraphicsPixmapItem, QGraphicsTextItem, QMenu, QTextEdit)
-from PyQt5.QtGui import (QIcon, QPixmap, QBrush, QPen)
-from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF, QEvent, QPoint)
+                             QGraphicsPixmapItem, QGraphicsTextItem, QMenu, QTextEdit, QTreeView, QAbstractItemView)
+from PyQt5.QtGui import (QIcon, QPixmap, QBrush, QPen, QStandardItemModel, QStandardItem)
+from PyQt5.QtCore import (pyqtSignal, QThread, QSize, Qt, QRectF, QEvent, QPoint, QModelIndex)
 from XBee_connect import XBeeConnect, TableModel
 from digi.xbee.util.utils import hex_to_string
 import time
 import random
 import logging
+import XBee_commands
+
+commands = []
+commands_dict = {}
+for i in XBee_commands.ALL_CLASSES:
+    for command in [command for command in dir(i) if not command.startswith("__")]:
+        commands.append(command)
+        commands_dict[command] = i.__dict__.get(command)
 
 
 class MainWindow(QMainWindow):
@@ -256,7 +264,6 @@ class MainWindow(QMainWindow):
         self.hide_log_action.triggered.connect(self.hide_log_button_clicked)
         self.toolbar.addAction(start_connect)
         self.toolbar.addAction(self.search_devices)
-        self.toolbar.addAction(test_btn)
         self.toolbar.addAction(self.hide_log_action)
 
     def log_message(self, msg):
@@ -442,7 +449,7 @@ class MainWindow(QMainWindow):
             type_device = v["module"].firmware
             self.mac_address = v["module"].mac
             pixmap = QGraphicsPixmapItem()
-            #pixmap.setFlag(QGraphicsPixmapItem.ItemIsMovable)
+            pixmap.setFlag(QGraphicsPixmapItem.ItemIsMovable)
             mac_address_item = QGraphicsTextItem(self.mac_address)
             self.graphics_scene_items[pixmap] = self.mac_address
             if type_device == "S2C Firmware: Coordinator":
@@ -484,22 +491,26 @@ class MainWindow(QMainWindow):
         # Модальное окно отправки команд из графической сцены
 
         self.context_settings = QDialog(self)
-        self.context_settings.resize(200, 130)
+        self.context_settings.resize(300, 300)
         self.context_settings.setWindowTitle('Управление')
         context_settings_layout = QGridLayout(self.context_settings)
         command = QLabel('Команда:')
         parameter = QLabel('Параметер:')
-        command_edit = QLineEdit()
+        self.command_edit = QLineEdit()
         parameter_edit = QLineEdit()
         send_command_btn = QPushButton('Отправить')
         cancel_context_dialog_btn = QPushButton('Отмена')
         context_settings_layout.addWidget(command, 1, 0)
-        context_settings_layout.addWidget(command_edit, 1, 1)
+        context_settings_layout.addWidget(self.command_edit, 1, 1)
         context_settings_layout.addWidget(parameter, 2, 0)
         context_settings_layout.addWidget(parameter_edit, 2, 1)
         context_settings_layout.addWidget(send_command_btn, 3, 0)
         context_settings_layout.addWidget(cancel_context_dialog_btn, 3, 1)
         cancel_context_dialog_btn.clicked.connect(self.close_context_settings_clicked)
+        modal_right_widget = QWidget()
+        context_settings_layout.addWidget(modal_right_widget)
+        modal_all_commands_widget = AllCommandsListWidget(self.command_edit)
+        context_settings_layout.addWidget(modal_all_commands_widget)
         self.context_settings.exec_()
 
     def close_context_settings_clicked(self):
@@ -557,6 +568,38 @@ class NetworkMapView(QGraphicsView):
 class NetworkMapScene(QGraphicsScene):
     def __init__(self, *args, **kwargs):
         super(NetworkMapScene, self).__init__(*args, **kwargs)
+
+class AllCommandsListWidget(QWidget):
+
+    def __init__(self, command_edit, parent=None):
+        super(AllCommandsListWidget, self).__init__(parent)
+        self.commands_list_model = QStandardItemModel()
+        self.view = QTreeView()
+        self.view.setEditTriggers(QAbstractItemView.NoEditTriggers)
+        self.view.setModel(self.commands_list_model)
+        self.commands_list_model.setHorizontalHeaderLabels([u'Выберите команду'])
+        parent = self.commands_list_model.invisibleRootItem()
+        for c in XBee_commands.ALL_CLASSES:
+            class_name_item = QStandardItem(c.__name__[1:])
+            parent.appendRow(class_name_item)
+            for c_item in [QStandardItem(c) for c in dir(c) if not c.startswith("__")]:
+                class_name_item.appendRow(c_item)
+        layout = QHBoxLayout(self)
+        layout.addWidget(self.view)
+
+
+        def on_item_clicked(index):
+            command_str = str(index.data().toString())
+            if index.parent().column() == 0:
+                command_edit.setText(commands_dict[command_str].command)
+
+        #self.connect(self.view, QtCore.SIGNAL("clicked(const QModelIndex&)"), on_item_clicked)
+
+
+#TODO Нужно, чтобы при нажатии на команду из списка команд, выбранная команда вставлялась в поле self.command_edit
+#TODO в функции init_context_settings_dialog (как у нас было когда-то)
+#TODO чуть выше закоменченная строчка, так было написано при PyQt4
+
 
 class TextLogger(logging.Handler):
     """
