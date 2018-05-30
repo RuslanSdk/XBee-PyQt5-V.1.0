@@ -3,11 +3,23 @@
 
 from PyQt5.QtCore import (QObject, pyqtSlot, pyqtSignal, QAbstractTableModel, QModelIndex, Qt)
 from PyQt5.QtWidgets import QMessageBox
-from digi.xbee.devices import (XBeeDevice, RemoteXBeeDevice, XBee64BitAddress)
+from digi.xbee.devices import (ZigBeeDevice, RemoteZigBeeDevice)
+from digi.xbee.models.address import XBee64BitAddress
 from digi.xbee.models.status import NetworkDiscoveryStatus
 from digi.xbee.util.utils import hex_string_to_bytes
-import time
+from digi.xbee.exception import TimeoutException, TransmitException, XBeeException
+from digi.xbee.models.mode import APIOutputMode
 from digi.xbee.util.utils import hex_to_string
+from PyQt5.QtCore import QElapsedTimer
+import time
+import random
+import string
+
+
+SOURCE_ENDPOINT = 0xE8
+DESTINATION_ENDPOINT = 0xE8
+CLUSTER_ID = 0x12
+PROFILE_ID = 0xC105
 
 
 module_type_dict = {'21': 'S2B ZigBee Coordinator API',
@@ -16,6 +28,7 @@ module_type_dict = {'21': 'S2B ZigBee Coordinator API',
                     '27': 'S2B ZigBee Router/End Device, Digital I/O Adapter',
                     '29': 'S2B ZigBee End Device API',
                     '40': 'S2C Firmware'}
+speed_dict = dict()
 
 
 class XBeeConnect(QObject):
@@ -27,6 +40,7 @@ class XBeeConnect(QObject):
     signal_discovered_finished = pyqtSignal()
 
     start_discovered_signal = pyqtSignal()
+    stop_test_speed_signal = pyqtSignal(str)
 
     def __init__(self, parent=None):
 
@@ -39,6 +53,7 @@ class XBeeConnect(QObject):
         self.node_id = ""
         self.mac = ""
         self.model = TableModel()
+        self.timer = QElapsedTimer()
 
         self.parent.signal_start_connect.connect(self.start_connection)
         self.parent.signal_read_info.connect(self.read_info)
@@ -52,10 +67,12 @@ class XBeeConnect(QObject):
 
         self.parent.signal_test_remote.connect(self.test_remote)
 
+        self.parent.signal_test_speed.connect(self.test_speed_to_remote_dev)
+
     @pyqtSlot()
     def start_connection(self):
 
-        local_device = XBeeDevice(self.com, self.speed)
+        local_device = ZigBeeDevice(self.com, self.speed)
         try:
             local_device.open()
             self.connected = True
@@ -249,6 +266,57 @@ class XBeeConnect(QObject):
                 return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
             else:
                 return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
+
+    def send_packet(self, module, remote_device, timer):
+
+        random_len = random.randint(60, 80)
+        random_data = ''.join(
+            [random.choice(string.ascii_letters + string.digits + string.punctuation) for n in range(random_len)])
+        start_time = timer.elapsed()
+        module.send_expl_data(remote_device, random_data, SOURCE_ENDPOINT,
+                              DESTINATION_ENDPOINT, CLUSTER_ID, PROFILE_ID)
+        return start_time, random_len
+
+    def test_speed_to_remote_dev(self, module_id, address):
+
+        print(address)
+
+        module = self.get_module_by_id(module_id)
+
+        try:
+            remote_device = RemoteZigBeeDevice(module, XBee64BitAddress.from_hex_string(address))
+            module.set_api_output_mode(APIOutputMode.EXPLICIT)
+            module.flush_queues()
+            module.add_data_received_callback(self.received_data_callback)
+
+            for i in range(10):
+                print("Send packet {}".format(i + 1))
+                start_time, random_len = self.send_packet(module, remote_device, self.timer)
+                speed_dict[random_len] = [start_time]
+                time.sleep(1)
+
+            print(speed_dict)
+            speeds = []
+            for k, v in speed_dict.items():
+                time_sec = (v[1] - v[0]) / 1000
+                speeds.append((k * 2 * 8 + 22) / time_sec)
+
+            result = ("Средняя скорость: {} бит/с".format(sum(speeds) / len(speeds)))
+            self.stop_test_speed_signal.emit(result)
+
+
+        except TimeoutException as e:
+            print('Истекло время ожидания ответа')
+        except TransmitException as e:
+            print('Ошибка передачи. Дополнительные данные:\n{}'.format(e))
+        except XBeeException as e:
+            print('Ошибка. Дополнительные данные:\n{}'.format(e))
+
+    def received_data_callback(self, xbee_message):
+        receive_time = self.timer.elapsed()
+        print("Received packet")
+        received_len = len(xbee_message.data.decode('utf8'))
+        speed_dict[received_len].append(receive_time)
 
 
 class TableModel(QAbstractTableModel):

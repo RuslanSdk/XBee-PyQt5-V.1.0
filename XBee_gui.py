@@ -37,6 +37,8 @@ class MainWindow(QMainWindow):
 
     signal_test_remote = pyqtSignal(int)
 
+    signal_test_speed = pyqtSignal(int, str)
+
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
@@ -50,6 +52,7 @@ class MainWindow(QMainWindow):
 
         self.xbee_connect.start_discovered_signal.connect(self.on_start_discovery)
         self.xbee_connect.signal_discovered_finished.connect(self.update_network_map)
+        self.xbee_connect.stop_test_speed_signal.connect(self.get_info_test_speed)
 
         self.init_ui()
 
@@ -223,6 +226,7 @@ class MainWindow(QMainWindow):
         self.two_tab_network_map()
         self.init_log(self.main_layout)
         self.graphics_scene_items = dict()
+        self.graphics_scene_types = dict()
         self.show()
 
     def init_table(self, layout):
@@ -438,6 +442,8 @@ class MainWindow(QMainWindow):
         self.scene.setSceneRect(QRectF())
 
         self.view.context_menu_pressed.connect(self.on_context_menu_pressed)
+        self.view.test_speed_pressed.connect(self.on_test_speed_pressed)
+
 
     def update_network_map(self):
         # Построение карты сети
@@ -452,25 +458,22 @@ class MainWindow(QMainWindow):
             pixmap.setFlag(QGraphicsPixmapItem.ItemIsMovable)
             mac_address_item = QGraphicsTextItem(self.mac_address)
             self.graphics_scene_items[pixmap] = self.mac_address
+            self.graphics_scene_types[pixmap] = type_device
             if type_device == "S2C Firmware: Coordinator":
                 pixmap.setPixmap(QPixmap('images/xbee-coord-icon.png'))
                 pixmap.setPos(x, y)
-                #mac_address_item.setPos(x - 18, y + 55)
             if type_device == "S2B ZigBee Router API":
                 pixmap.setPixmap(QPixmap('images/xbee-router-icon.png'))
                 pixmap.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
-                #mac_address_item.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
             if type_device == "S2B ZigBee End Device API":
                 pixmap.setPixmap(QPixmap('images/xbee-end-dev-icon.png'))
                 pixmap.setPos(x + random.randint(-150, 250), y + random.randint(-250, 350))
             self.scene.addItem(pixmap)
-            #self.scene.addItem(mac_address_item)
 
         self.search_devices.setDisabled(False)
 
     def on_context_menu_pressed(self, pos):
 
-        #test = self.view.itemAt(pos)
         try:
             test = self.graphics_scene_items[self.view.itemAt(pos)]
             print(test)
@@ -478,14 +481,19 @@ class MainWindow(QMainWindow):
         except KeyError:
             QMessageBox.warning(self, 'Внимание', 'Элементов не найдено!')
 
+    def on_test_speed_pressed(self, pos):
 
-
-
-
-    def read_info_for_scene(self, address):
-
-        print('тестттттттттт')
-        print(address)
+        try:
+            self.address = self.graphics_scene_items[self.view.itemAt(pos)]
+            self.type_dev = self.graphics_scene_types[self.view.itemAt(pos)]
+            print(self.address)
+            print(self.type_dev)
+            if self.type_dev == "S2C Firmware: Coordinator":
+                QMessageBox.warning(self, 'Внимание', 'Выберите на карте НЕ координатор!')
+            else:
+                self.init_test_speed_dialog()
+        except KeyError:
+            QMessageBox.warning(self, 'Внимание', 'Элементов не найдено!')
 
     def init_context_settings_dialog(self):
         # Модальное окно отправки команд из графической сцены
@@ -512,6 +520,50 @@ class MainWindow(QMainWindow):
         modal_all_commands_widget = AllCommandsListWidget(self.command_edit)
         context_settings_layout.addWidget(modal_all_commands_widget)
         self.context_settings.exec_()
+
+    def init_test_speed_dialog(self):
+
+        self.test_speed = QDialog(self)
+        self.test_speed.resize(300, 150)
+        self.test_speed.setWindowTitle('Тест скорости')
+        test_speed_layout = QVBoxLayout(self.test_speed)
+        info_data_for_test_box = QGroupBox()
+        info_data_for_test_layout = QGridLayout(info_data_for_test_box)
+        mac_address_remote_lbl = QLabel('MAC-адрес устройства: ')
+        self.mac_address_remote_edit = QLineEdit()
+        self.mac_address_remote_edit.setText(self.address)
+        self.mac_address_remote_edit.setReadOnly(True)
+        type_remote_dev_lbl = QLabel('Тип устройства: ')
+        type_remote_dev_info_lbl = QLabel()
+        type_remote_dev_info_lbl.setText(self.type_dev)
+        self.info_speed_test = QLabel()
+        start_test_speed_btn = QPushButton('Начать тест')
+        start_test_speed_btn.setFixedHeight(40)
+        start_test_speed_btn.setStyleSheet('font-size: 14px;')
+
+        test_speed_layout.addWidget(info_data_for_test_box)
+
+        info_data_for_test_layout.addWidget(mac_address_remote_lbl, 1, 0)
+        info_data_for_test_layout.addWidget(self.mac_address_remote_edit, 1, 1)
+        info_data_for_test_layout.addWidget(type_remote_dev_lbl, 2, 0)
+        info_data_for_test_layout.addWidget(type_remote_dev_info_lbl, 2, 1)
+        info_data_for_test_layout.addWidget(self.info_speed_test, 3, 0)
+        test_speed_layout.addWidget(start_test_speed_btn)
+
+        start_test_speed_btn.clicked.connect(self.test_speed_btn_clicked)
+
+        self.test_speed.exec_()
+
+    def test_speed_btn_clicked(self):
+        try:
+            index = self.table.selectedIndexes()[0].row()
+            self.signal_test_speed.emit(index, self.address)
+        except Exception as e:
+            QMessageBox.warning(self, 'Ошибка', 'Выберите координатор из списка!')
+            print(e)
+
+    def get_info_test_speed(self, result):
+        self.info_speed_test.setText(str(result))
 
     def close_context_settings_clicked(self):
         self.context_settings.close()
@@ -553,6 +605,7 @@ class TableView(QTableView):
 
 class NetworkMapView(QGraphicsView):
     context_menu_pressed = pyqtSignal(QPoint)
+    test_speed_pressed = pyqtSignal(QPoint)
 
     def __init__(self, *args, **kwargs):
         super(NetworkMapView, self).__init__(*args, **kwargs)
@@ -560,19 +613,24 @@ class NetworkMapView(QGraphicsView):
     def contextMenuEvent(self, event):
         menu = QMenu()
         settings_action = menu.addAction("Настройки")
+        test_speed_action = menu.addAction("Тест скорости")
         action = menu.exec_(event.globalPos())
         if action == settings_action:
             self.context_menu_pressed.emit(event.pos())
+        if action == test_speed_action:
+            self.test_speed_pressed.emit(event.pos())
 
 
 class NetworkMapScene(QGraphicsScene):
     def __init__(self, *args, **kwargs):
         super(NetworkMapScene, self).__init__(*args, **kwargs)
 
+
 class AllCommandsListWidget(QWidget):
 
     def __init__(self, command_edit, parent=None):
         super(AllCommandsListWidget, self).__init__(parent)
+        command_edit = command_edit
         self.commands_list_model = QStandardItemModel()
         self.view = QTreeView()
         self.view.setEditTriggers(QAbstractItemView.NoEditTriggers)
@@ -587,18 +645,13 @@ class AllCommandsListWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.addWidget(self.view)
 
-
         def on_item_clicked(index):
-            command_str = str(index.data().toString())
+            command_str = str(index.data(0))
             if index.parent().column() == 0:
+                print(commands_dict[command_str].command)
                 command_edit.setText(commands_dict[command_str].command)
 
-        #self.connect(self.view, QtCore.SIGNAL("clicked(const QModelIndex&)"), on_item_clicked)
-
-
-#TODO Нужно, чтобы при нажатии на команду из списка команд, выбранная команда вставлялась в поле self.command_edit
-#TODO в функции init_context_settings_dialog (как у нас было когда-то)
-#TODO чуть выше закоменченная строчка, так было написано при PyQt4
+        self.view.clicked.connect(on_item_clicked)
 
 
 class TextLogger(logging.Handler):
