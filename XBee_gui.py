@@ -32,12 +32,14 @@ class MainWindow(QMainWindow):
     signal_coordinator_enable = pyqtSignal(int)
     signal_router_enable = pyqtSignal(int)
     signal_end_dev_enable = pyqtSignal(int)
-    signal_search_devices = pyqtSignal(int)
+    signal_search_devices = pyqtSignal()
     signal_update = pyqtSignal(int, str, str)
 
     signal_test_remote = pyqtSignal(int)
 
-    signal_test_speed = pyqtSignal(int, str)
+    signal_test_speed = pyqtSignal(str)
+
+    signal_download_list = pyqtSignal()
 
     def __init__(self, parent=None):
 
@@ -189,8 +191,7 @@ class MainWindow(QMainWindow):
 
     def search_devices_clicked(self):
 
-        index = self.table.selectedIndexes()[0].row()
-        self.signal_search_devices.emit(index)
+        self.signal_search_devices.emit()
 
     def success_connect(self):
 
@@ -260,15 +261,20 @@ class MainWindow(QMainWindow):
         self.search_devices = QAction(QIcon('images/search_dev_icon'), 'Поиск устройств', self)
         self.hide_log_action = QAction(QIcon('images/hide-log-button-icon.png'), "Скрыть/Показать логи", self)
         self.search_devices.setDisabled(True)
-        test_btn = QAction('TEST', self)
+        self.download_list = QAction('Выгрузить', self)
         start_connect.triggered.connect(self.init_connect_dialog)
-        #search_devices.triggered.connect(self.update_network_map)
+
         self.search_devices.triggered.connect(self.search_devices_clicked)
-        test_btn.triggered.connect(self.test_remote_device)
+
         self.hide_log_action.triggered.connect(self.hide_log_button_clicked)
+        self.download_list.triggered.connect(self.download_list_clicked)
         self.toolbar.addAction(start_connect)
         self.toolbar.addAction(self.search_devices)
         self.toolbar.addAction(self.hide_log_action)
+        self.toolbar.addAction(self.download_list)
+
+    def download_list_clicked(self):
+        self.signal_download_list.emit()
 
     def log_message(self, msg):
         """
@@ -444,7 +450,6 @@ class MainWindow(QMainWindow):
         self.view.context_menu_pressed.connect(self.on_context_menu_pressed)
         self.view.test_speed_pressed.connect(self.on_test_speed_pressed)
 
-
     def update_network_map(self):
         # Построение карты сети
 
@@ -459,13 +464,13 @@ class MainWindow(QMainWindow):
             mac_address_item = QGraphicsTextItem(self.mac_address)
             self.graphics_scene_items[pixmap] = self.mac_address
             self.graphics_scene_types[pixmap] = type_device
-            if type_device == "S2C Firmware: Coordinator":
+            if type_device == "Coordinator":
                 pixmap.setPixmap(QPixmap('images/xbee-coord-icon.png'))
                 pixmap.setPos(x, y)
-            if type_device == "S2B ZigBee Router API":
+            if type_device == "Router":
                 pixmap.setPixmap(QPixmap('images/xbee-router-icon.png'))
                 pixmap.setPos(x + random.randint(-150, 150), y + random.randint(-250, 250))
-            if type_device == "S2B ZigBee End Device API":
+            if type_device == "End Device":
                 pixmap.setPixmap(QPixmap('images/xbee-end-dev-icon.png'))
                 pixmap.setPos(x + random.randint(-150, 250), y + random.randint(-250, 350))
             self.scene.addItem(pixmap)
@@ -488,10 +493,7 @@ class MainWindow(QMainWindow):
             self.type_dev = self.graphics_scene_types[self.view.itemAt(pos)]
             print(self.address)
             print(self.type_dev)
-            if self.type_dev == "S2C Firmware: Coordinator":
-                QMessageBox.warning(self, 'Внимание', 'Выберите на карте НЕ координатор!')
-            else:
-                self.init_test_speed_dialog()
+            self.init_test_speed_dialog()
         except KeyError:
             QMessageBox.warning(self, 'Внимание', 'Элементов не найдено!')
 
@@ -556,8 +558,8 @@ class MainWindow(QMainWindow):
 
     def test_speed_btn_clicked(self):
         try:
-            index = self.table.selectedIndexes()[0].row()
-            self.signal_test_speed.emit(index, self.address)
+
+            self.signal_test_speed.emit(self.address)
         except Exception as e:
             QMessageBox.warning(self, 'Ошибка', 'Выберите координатор из списка!')
             print(e)

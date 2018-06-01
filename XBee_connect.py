@@ -28,7 +28,7 @@ module_type_dict = {'21': 'S2B ZigBee Coordinator API',
                     '27': 'S2B ZigBee Router/End Device, Digital I/O Adapter',
                     '29': 'S2B ZigBee End Device API',
                     '40': 'S2C Firmware'}
-speed_dict = dict()
+
 
 
 class XBeeConnect(QObject):
@@ -52,8 +52,12 @@ class XBeeConnect(QObject):
         self.parent = parent
         self.node_id = ""
         self.mac = ""
+        self.coordinator = None
         self.model = TableModel()
+        self.speed_dict = dict()
         self.timer = QElapsedTimer()
+        self.callback_counter = 0
+        self.list_data = []
 
         self.parent.signal_start_connect.connect(self.start_connection)
         self.parent.signal_read_info.connect(self.read_info)
@@ -69,6 +73,8 @@ class XBeeConnect(QObject):
 
         self.parent.signal_test_speed.connect(self.test_speed_to_remote_dev)
 
+        self.parent.signal_download_list.connect(self.write_to_file)
+
     @pyqtSlot()
     def start_connection(self):
 
@@ -80,9 +86,12 @@ class XBeeConnect(QObject):
             # делаем для теста print
             print('ПОРТ ОТКРЫТ. Устройство готово к работе')
 
-            local_device.type_device = hex_to_string(local_device.get_parameter('VR'))
+            local_device.type_device = hex_to_string(local_device.get_parameter("VR"))
+            type_dev = local_device.type_device
+            print("Firmware version: %s" % type_dev)
 
-            print("Firmware version: %s" % local_device.type_device)
+            if self.type_devices_info(type_dev, local_device) == "Coordinator":
+                self.coordinator = local_device
 
             local_device.mac = str(local_device.get_64bit_addr())
             local_device.node_id = str(local_device.get_node_id())
@@ -91,6 +100,7 @@ class XBeeConnect(QObject):
             local_device.firmware = ""
 
             self.model.modules[local_device.mac] = {"id": self.model.module_id, "module": local_device}
+
             self.successful_connection_signal.emit()
             self.update_table()
 
@@ -148,9 +158,13 @@ class XBeeConnect(QObject):
         print('ПОРТ ЗАКРЫТ')
         self.update_table(add=False)
 
-    def search_devices(self, module_id):
+    def search_devices(self):
 
-        module = self.get_module_by_id(module_id)
+        if self.coordinator:
+            module = self.coordinator
+        else:
+            QMessageBox.warning(self, 'Внимание', 'Подключите координатор по COM-порту!')
+
         xbee_network = module.get_network()
         xbee_network.set_discovery_timeout(10)  # sec
         xbee_network.clear()
@@ -179,7 +193,7 @@ class XBeeConnect(QObject):
             print("There was an error discovering devices: %s" % status.description)
         for k, v in self.model.modules.items():
             m = v["module"]
-            m.firmware = self.type_devices_info(m.get_parameter("VR"), m)
+            m.firmware = self.type_devices_info(hex_to_string(m.get_parameter("VR")), m)
         self.update_table(add=False)
         self.signal_discovered_finished.emit()
 
@@ -250,60 +264,80 @@ class XBeeConnect(QObject):
 
     def type_devices_info(self, firmware, module):
 
-        vr = hex_to_string(firmware)
+        print(firmware)
+        print('тип устойства тесттттт')
+        vr = firmware
         if vr[0:2] == '21':
-            return "{}".format(module_type_dict.get('21'))
+            return "Coordinator"
         if vr[0:2] == '23':
-            return "{}".format(module_type_dict.get('23'))
+            return "Router"
         if vr[0:2] == '29':
-            return "{}".format(module_type_dict.get('29'))
+            return "End Device"
         elif vr[0:2] == '40':
             coord_en = module.get_parameter('CE')
             sleep_mod = module.get_parameter('SM')
+
             if (str(hex_to_string(coord_en))) == '01' and (str(hex_to_string(sleep_mod))) == '00':
-                return "{}".format(module_type_dict.get('40') + ': ' + 'Coordinator')
+                return "Coordinator"
             elif (str(hex_to_string(coord_en))) == '00' and (str(hex_to_string(sleep_mod))) == '00':
-                return "{}".format(module_type_dict.get('40') + ': ' + 'Router')
+                return "Router"
             else:
-                return "{}".format(module_type_dict.get('40') + ': ' + 'End Device')
+                return "End Device"
 
-    def send_packet(self, module, remote_device, timer):
+    def received_data_callback(self, xbee_message):
+        receive_time = self.timer.elapsed()
+        received_len = len(xbee_message.data.decode('utf8'))
+        self.callback_counter += 1
+        print("Callback: {}".format(self.callback_counter))
+        self.speed_dict[received_len].append(receive_time)
 
-        random_len = random.randint(60, 80)
-        random_data = ''.join(
-            [random.choice(string.ascii_letters + string.digits + string.punctuation) for n in range(random_len)])
-        start_time = timer.elapsed()
-        module.send_expl_data(remote_device, random_data, SOURCE_ENDPOINT,
-                              DESTINATION_ENDPOINT, CLUSTER_ID, PROFILE_ID)
-        return start_time, random_len
+    def test_speed_to_remote_dev(self, address):
 
-    def test_speed_to_remote_dev(self, module_id, address):
 
-        print(address)
-
-        module = self.get_module_by_id(module_id)
-
+        if self.coordinator:
+            module = self.coordinator
+        else:
+            QMessageBox.warning(self, 'Внимание', 'Подключите координатор по COM-порту!')
         try:
-            remote_device = RemoteZigBeeDevice(module, XBee64BitAddress.from_hex_string(address))
+            self.speed_dict = dict()
+            self.callback_counter = 0
+            print("start test: {}".format(self.speed_dict))
+            remote_device = self.model.modules[address]["module"]
             module.set_api_output_mode(APIOutputMode.EXPLICIT)
+
+            def send_packet(_module, _remote_device, _timer):
+
+                _random_len = random.randint(10, 80)
+                random_data = ''.join(
+                    [random.choice(string.ascii_letters + string.digits + string.punctuation) for n in
+                     range(_random_len)])
+                _start_time = _timer.elapsed()
+                _module.send_expl_data(_remote_device, random_data, SOURCE_ENDPOINT,
+                                       DESTINATION_ENDPOINT, CLUSTER_ID, PROFILE_ID)
+                return _start_time, _random_len
+
             module.flush_queues()
             module.add_data_received_callback(self.received_data_callback)
 
-            for i in range(10):
-                print("Send packet {}".format(i + 1))
-                start_time, random_len = self.send_packet(module, remote_device, self.timer)
-                speed_dict[random_len] = [start_time]
-                time.sleep(1)
+            for i in range(30):
+                start_time, random_len = send_packet(module, remote_device, self.timer)
+                self.speed_dict[random_len] = [start_time]
+                print("Send packet: {}".format(self.speed_dict))
+                time.sleep(0.1)
 
-            print(speed_dict)
             speeds = []
-            for k, v in speed_dict.items():
+            for k, v in self.speed_dict.items():
                 time_sec = (v[1] - v[0]) / 1000
-                speeds.append((k * 2 * 8 + 22) / time_sec)
+                speeds.append((k * 2 * 8 + 32*8) / time_sec)
 
-            result = ("Средняя скорость: {} бит/с".format(sum(speeds) / len(speeds)))
+            result = ("Средняя скорость: {} бит/с".format(round(sum(speeds) / len(speeds))))
+            print(result)
+
             self.stop_test_speed_signal.emit(result)
 
+            dpm = hex_to_string(module.get_parameter("DB"))
+            self.list_data.append((round(sum(speeds) / len(speeds)), dpm))
+            print(self.list_data)
 
         except TimeoutException as e:
             print('Истекло время ожидания ответа')
@@ -311,12 +345,18 @@ class XBeeConnect(QObject):
             print('Ошибка передачи. Дополнительные данные:\n{}'.format(e))
         except XBeeException as e:
             print('Ошибка. Дополнительные данные:\n{}'.format(e))
+        finally:
+            module.del_data_received_callback(self.received_data_callback)
 
-    def received_data_callback(self, xbee_message):
-        receive_time = self.timer.elapsed()
-        print("Received packet")
-        received_len = len(xbee_message.data.decode('utf8'))
-        speed_dict[received_len].append(receive_time)
+    def write_to_file(self):
+
+        if len(self.list_data) != 0:
+            new_list = ["{},{}\n".format(x[0], x[1]) for x in self.list_data]
+            new_file = open('download_list.txt', 'w', encoding='utf8')
+            new_file.writelines(new_list)
+            new_file.close()
+        else:
+            print('Значений нет!')
 
 
 class TableModel(QAbstractTableModel):
