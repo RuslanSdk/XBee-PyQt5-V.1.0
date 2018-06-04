@@ -314,6 +314,7 @@ class MainWindow(QMainWindow):
         self.com_list.setCurrentIndex(2)
 
         self.speed_list.addItems(['9600', '115200'])
+        self.speed_list.setCurrentIndex(1)
         self.connect_btn = QPushButton('Подключиться')
         self.cancel_btn = QPushButton('Отмена')
         connect_dialog_layout.addWidget(self.com_lbl, 1, 0)

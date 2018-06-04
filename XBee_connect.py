@@ -53,11 +53,13 @@ class XBeeConnect(QObject):
         self.node_id = ""
         self.mac = ""
         self.coordinator = None
+        self.other_dev = None
         self.model = TableModel()
         self.speed_dict = dict()
         self.timer = QElapsedTimer()
         self.callback_counter = 0
         self.list_data = []
+        self.test_result = []
 
         self.parent.signal_start_connect.connect(self.start_connection)
         self.parent.signal_read_info.connect(self.read_info)
@@ -289,25 +291,27 @@ class XBeeConnect(QObject):
         received_len = len(xbee_message.data.decode('utf8'))
         self.callback_counter += 1
         print("Callback: {}".format(self.callback_counter))
-        self.speed_dict[received_len].append(receive_time)
+        start_time = self.speed_dict[received_len][0]
+        _time = (receive_time-start_time)/1000
+        self.list_data.append((received_len, _time, round(received_len * 8/_time)))
 
     def test_speed_to_remote_dev(self, address):
-
 
         if self.coordinator:
             module = self.coordinator
         else:
             QMessageBox.warning(self, 'Внимание', 'Подключите координатор по COM-порту!')
         try:
-            self.speed_dict = dict()
+
             self.callback_counter = 0
             print("start test: {}".format(self.speed_dict))
             remote_device = self.model.modules[address]["module"]
             module.set_api_output_mode(APIOutputMode.EXPLICIT)
 
-            def send_packet(_module, _remote_device, _timer):
+            def send_packet(_module, _remote_device, _timer, _length_packet):
 
-                _random_len = random.randint(10, 80)
+                _random_len = _length_packet
+
                 random_data = ''.join(
                     [random.choice(string.ascii_letters + string.digits + string.punctuation) for n in
                      range(_random_len)])
@@ -319,25 +323,17 @@ class XBeeConnect(QObject):
             module.flush_queues()
             module.add_data_received_callback(self.received_data_callback)
 
-            for i in range(30):
-                start_time, random_len = send_packet(module, remote_device, self.timer)
-                self.speed_dict[random_len] = [start_time]
-                print("Send packet: {}".format(self.speed_dict))
-                time.sleep(0.1)
+            for j in range(10):
+                self.speed_dict = dict()
+                for i in range(10, 81, 10):
+                    start_time, random_len = send_packet(module, remote_device, self.timer, i)
+                    self.speed_dict[random_len] = [start_time]
+                    print("Send packet: {}".format(self.speed_dict))
+                    time.sleep(0.5)
+                self.test_result.append(list(self.list_data))
+                self.list_data.clear()
 
-            speeds = []
-            for k, v in self.speed_dict.items():
-                time_sec = (v[1] - v[0]) / 1000
-                speeds.append((k * 2 * 8 + 32*8) / time_sec)
-
-            result = ("Средняя скорость: {} бит/с".format(round(sum(speeds) / len(speeds))))
-            print(result)
-
-            self.stop_test_speed_signal.emit(result)
-
-            dpm = hex_to_string(module.get_parameter("DB"))
-            self.list_data.append((round(sum(speeds) / len(speeds)), dpm))
-            print(self.list_data)
+            self.stop_test_speed_signal.emit('Тест окочен.')
 
         except TimeoutException as e:
             print('Истекло время ожидания ответа')
@@ -350,8 +346,10 @@ class XBeeConnect(QObject):
 
     def write_to_file(self):
 
-        if len(self.list_data) != 0:
-            new_list = ["{},{}\n".format(x[0], x[1]) for x in self.list_data]
+        if len(self.test_result) != 0:
+            new_list = []
+            for i in self.test_result:
+                new_list += ["{},{},{}\n".format(x[0], x[1], x[2]) for x in i]
             new_file = open('download_list.txt', 'w', encoding='utf8')
             new_file.writelines(new_list)
             new_file.close()
