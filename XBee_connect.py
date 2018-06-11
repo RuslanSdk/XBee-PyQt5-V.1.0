@@ -77,6 +77,8 @@ class XBeeConnect(QObject):
 
         self.parent.signal_download_list.connect(self.write_to_file)
 
+        self.parent.signal_send_command.connect(self._send_command)
+
     @pyqtSlot()
     def start_connection(self):
 
@@ -323,7 +325,7 @@ class XBeeConnect(QObject):
             module.flush_queues()
             module.add_data_received_callback(self.received_data_callback)
 
-            for j in range(10):
+            for j in range(2):
                 self.speed_dict = dict()
                 for i in range(10, 81, 10):
                     start_time, random_len = send_packet(module, remote_device, self.timer, i)
@@ -355,6 +357,28 @@ class XBeeConnect(QObject):
             new_file.close()
         else:
             print('Значений нет!')
+
+    def _send_command(self, address, comm, param):
+
+        remote_device = self.model.modules[address]["module"]
+        print(remote_device)
+
+        if not param:
+            #команда без параметров
+            if comm == 'NI' or comm == 'ni':
+                print(remote_device.get_node_id())
+            else:
+                print(hex_to_string(remote_device.get_parameter(comm)))
+        else:
+            #команда с параметром
+            if comm == 'ID' or comm == 'id':
+                remote_device.set_pan_id(hex_string_to_bytes(str(param)))
+            elif comm == 'NI' or comm == 'ni':
+                remote_device.set_parameter(str(comm), bytearray(str(param), 'utf8'))
+            else:
+                remote_device.set_parameter(comm, hex_string_to_bytes(str(param)))
+            remote_device.apply_changes()
+            remote_device.write_changes()
 
 
 class TableModel(QAbstractTableModel):

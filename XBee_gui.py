@@ -41,6 +41,8 @@ class MainWindow(QMainWindow):
 
     signal_download_list = pyqtSignal()
 
+    signal_send_command = pyqtSignal(str, str, str)
+
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
@@ -192,6 +194,13 @@ class MainWindow(QMainWindow):
     def search_devices_clicked(self):
 
         self.signal_search_devices.emit()
+
+    def send_command(self):
+        #отправка команд из карты сети
+
+        cmd = self.command_edit.text()
+        param = self.parameter_edit.text()
+        self.signal_send_command.emit(self.addr_mac, cmd, param)
 
     def success_connect(self):
 
@@ -481,8 +490,8 @@ class MainWindow(QMainWindow):
     def on_context_menu_pressed(self, pos):
 
         try:
-            test = self.graphics_scene_items[self.view.itemAt(pos)]
-            print(test)
+            self.addr_mac = self.graphics_scene_items[self.view.itemAt(pos)]
+            print(self.addr_mac)
             self.init_context_settings_dialog()
         except KeyError:
             QMessageBox.warning(self, 'Внимание', 'Элементов не найдено!')
@@ -508,13 +517,13 @@ class MainWindow(QMainWindow):
         command = QLabel('Команда:')
         parameter = QLabel('Параметер:')
         self.command_edit = QLineEdit()
-        parameter_edit = QLineEdit()
+        self.parameter_edit = QLineEdit()
         send_command_btn = QPushButton('Отправить')
         cancel_context_dialog_btn = QPushButton('Отмена')
         context_settings_layout.addWidget(command, 1, 0)
         context_settings_layout.addWidget(self.command_edit, 1, 1)
         context_settings_layout.addWidget(parameter, 2, 0)
-        context_settings_layout.addWidget(parameter_edit, 2, 1)
+        context_settings_layout.addWidget(self.parameter_edit, 2, 1)
         context_settings_layout.addWidget(send_command_btn, 3, 0)
         context_settings_layout.addWidget(cancel_context_dialog_btn, 3, 1)
         cancel_context_dialog_btn.clicked.connect(self.close_context_settings_clicked)
@@ -522,6 +531,8 @@ class MainWindow(QMainWindow):
         context_settings_layout.addWidget(modal_right_widget)
         modal_all_commands_widget = AllCommandsListWidget(self.command_edit)
         context_settings_layout.addWidget(modal_all_commands_widget)
+
+        send_command_btn.clicked.connect(self.send_command)
         self.context_settings.exec_()
 
     def init_test_speed_dialog(self):
