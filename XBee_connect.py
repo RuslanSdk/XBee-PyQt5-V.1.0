@@ -79,6 +79,8 @@ class XBeeConnect(QObject):
 
         self.parent.signal_send_command.connect(self._send_command)
 
+        self.parent.signal_close_program.connect(self.close_program)
+
     @pyqtSlot()
     def start_connection(self):
 
@@ -161,6 +163,11 @@ class XBeeConnect(QObject):
         print(self.model.modules)
         print('ПОРТ ЗАКРЫТ')
         self.update_table(add=False)
+
+    def close_program(self):
+        if self.coordinator:
+            module = self.coordinator
+            module.close()
 
     def search_devices(self):
 
@@ -268,8 +275,6 @@ class XBeeConnect(QObject):
 
     def type_devices_info(self, firmware, module):
 
-        print(firmware)
-        print('тип устойства тесттттт')
         vr = firmware
         if vr[0:2] == '21':
             return "Coordinator"

@@ -43,6 +43,8 @@ class MainWindow(QMainWindow):
 
     signal_send_command = pyqtSignal(str, str, str)
 
+    signal_close_program = pyqtSignal()
+
     def __init__(self, parent=None):
 
         super(MainWindow, self).__init__(parent)
@@ -201,6 +203,9 @@ class MainWindow(QMainWindow):
         cmd = self.command_edit.text()
         param = self.parameter_edit.text()
         self.signal_send_command.emit(self.addr_mac, cmd, param)
+
+    def closeEvent(self, event):
+        self.signal_close_program.emit()
 
     def success_connect(self):
 
@@ -511,25 +516,36 @@ class MainWindow(QMainWindow):
         # Модальное окно отправки команд из графической сцены
 
         self.context_settings = QDialog(self)
-        self.context_settings.resize(300, 300)
+        self.context_settings.resize(300, 320)
         self.context_settings.setWindowTitle('Управление')
-        context_settings_layout = QGridLayout(self.context_settings)
+        context_settings_layout = QVBoxLayout(self.context_settings)
+        send_command_group = QGroupBox()
+        send_command_layout = QGridLayout(send_command_group)
         command = QLabel('Команда:')
+        command.setStyleSheet('font-size: 12px;')
         parameter = QLabel('Параметер:')
+        parameter.setStyleSheet('font-size: 12px;')
         self.command_edit = QLineEdit()
+        self.command_edit.setStyleSheet('font-size: 12px;')
         self.parameter_edit = QLineEdit()
+        self.parameter_edit.setStyleSheet('font-size: 12px;')
         send_command_btn = QPushButton('Отправить')
+        send_command_btn.setFixedHeight(30)
+        send_command_btn.setStyleSheet('font-size: 12px;')
         cancel_context_dialog_btn = QPushButton('Отмена')
-        context_settings_layout.addWidget(command, 1, 0)
-        context_settings_layout.addWidget(self.command_edit, 1, 1)
-        context_settings_layout.addWidget(parameter, 2, 0)
-        context_settings_layout.addWidget(self.parameter_edit, 2, 1)
-        context_settings_layout.addWidget(send_command_btn, 3, 0)
-        context_settings_layout.addWidget(cancel_context_dialog_btn, 3, 1)
+        cancel_context_dialog_btn.setFixedHeight(30)
+        cancel_context_dialog_btn.setStyleSheet('font-size: 12px;')
+        send_command_layout.addWidget(command, 1, 0)
+        send_command_layout.addWidget(self.command_edit, 1, 1)
+        send_command_layout.addWidget(parameter, 2, 0)
+        send_command_layout.addWidget(self.parameter_edit, 2, 1)
+        send_command_layout.addWidget(send_command_btn, 3, 0)
+        send_command_layout.addWidget(cancel_context_dialog_btn, 3, 1)
         cancel_context_dialog_btn.clicked.connect(self.close_context_settings_clicked)
         modal_right_widget = QWidget()
         context_settings_layout.addWidget(modal_right_widget)
         modal_all_commands_widget = AllCommandsListWidget(self.command_edit)
+        context_settings_layout.addWidget(send_command_group)
         context_settings_layout.addWidget(modal_all_commands_widget)
 
         send_command_btn.clicked.connect(self.send_command)
